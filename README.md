@@ -21,11 +21,13 @@ production, décodage Google Fonts depuis HTML et CSS, moteur puis rapport
 terminal ou JSON. `--fail-on-duplicates` échoue uniquement sur les répétitions
 strictes de confiance certaine. Le même parcours est disponible avec `audit()`.
 
-Les lots #1 à #7 sont livrés sur `main`. Les PR #11 à #16 ont été fusionnées
+Les lots #1 à #8 sont livrés sur `main`. Les PR #11 à #16 ont été fusionnées
 ensemble via la [PR #17](https://github.com/dokor/web-font-optimizer/pull/17),
-après validation de la CI sur ses quatre environnements. Le lot #8 est livré
-sur `main` via la [PR #18](https://github.com/dokor/web-font-optimizer/pull/18). Les sections
-ci-dessous décrivent les capacités et limites de chaque module.
+et le parcours complet via la [PR #18](https://github.com/dokor/web-font-optimizer/pull/18).
+La CI a validé les 114 tests et le paquet installé sur ses quatre environnements.
+La [recette finale du MVP](docs/recette-mvp.md) relie les critères de livraison
+aux tests et aux résultats sur React/Vite et Next.js. Les sections ci-dessous
+décrivent les capacités et limites de chaque module.
 
 Le suivi d’ensemble et les critères de livraison sont dans
 [l’issue de pilotage #9](https://github.com/dokor/web-font-optimizer/issues/9).
@@ -323,8 +325,9 @@ l’analyseur CSS ; elles peuvent être rapprochées de la définition par le no
 variable. Le moteur ignore l’exposition `.variable` lorsqu’il recense les usages.
 Une définition Next exposée et unique peut résoudre une consommation de même
 nom dans une feuille CSS externe ou un style React. Plusieurs instances exposées
-avec ce nom restent ambiguës. Le contexte de l’instance est conservé pour le
-rapprochement ; cela ne prouve ni héritage DOM ni rendu navigateur. L’adaptateur
+avec ce nom ou une définition CSS concurrente restent ambiguës. Le contexte
+de l’instance est conservé pour le rapprochement ; cela ne prouve ni héritage
+DOM ni rendu navigateur. L’adaptateur
 fait partie du registre de production.
 
 Les fixtures `test/fixtures/next/` et les tests `test/next.test.js` couvrent les
@@ -350,7 +353,7 @@ un emplacement et un conseil. Les sorties peuvent importer `exampleReport` depui
 | [Next (#5)](https://github.com/dokor/web-font-optimizer/issues/5), livré ([PR #14](https://github.com/dokor/web-font-optimizer/pull/14)) | `src/analyzers/next/` | Texte contenant des appels à `next/font` |
 | [Moteur (#6)](https://github.com/dokor/web-font-optimizer/issues/6), livré ([PR #16](https://github.com/dokor/web-font-optimizer/pull/16)) | `src/engine/` | Observations synthétiques → rapport v1 |
 | [Sorties et politique CI (#7)](https://github.com/dokor/web-font-optimizer/issues/7), livré ([PR #15](https://github.com/dokor/web-font-optimizer/pull/15)) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
-| [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8), livré ([PR #18](https://github.com/dokor/web-font-optimizer/pull/18)) | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
+| [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8), livré ([PR #18](https://github.com/dokor/web-font-optimizer/pull/18)) | `src/audit.ts`, `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
 
 Les modules restent testables isolément. `src/audit.ts` fournit leur registre
 commun et le pipeline utilisé par la CLI ; les mêmes cas de recette sont lancés
@@ -480,8 +483,9 @@ représentative choisie de manière déterministe.
 | `no-static-usage` | `info` / `possible` | Famille ou variante déclarée/chargée sans usage statique compatible dans sa portée. Vérifier avant de supprimer. |
 | `undeclared-family` | `info` / `possible` | Famille utilisée sans déclaration/chargement connu compatible. Vérifier les feuilles externes et polices installées. |
 
-Les portées sont des identités opaques : une déclaration sans contexte peut
-servir un usage de toute portée ; deux contextes explicites différents ne
+Les portées sont des identités opaques : une déclaration sans contexte ou avec
+`scope: 'global'` peut servir un usage de toute portée ; deux contextes
+explicites différents ne
 prouvent pas un usage commun. Ils ne prouvent pas non plus que les chargements
 s’excluent à l’exécution, d’où un chevauchement seulement possible. Une portée
 inconnue reste ambiguë. Des `unicode-range` disjoints ou des graisses/styles/
