@@ -18,7 +18,10 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.0.0"
+  },
+  "dependencies": {
+    "postcss-value-parser": "^4.2.0",
     "typescript": "~5.9.3"
   }
 }

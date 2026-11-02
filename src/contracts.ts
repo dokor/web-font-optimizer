@@ -49,6 +49,14 @@ export interface Declaration extends Evidence {
 export interface Usage extends Evidence {
   readonly kind: 'usage';
   readonly familyStack?: readonly string[];
+  /** Authored static CSS value, including shorthand. */
+  readonly value?: string;
+  /** A reference in source code; this is not evidence of browser rendering. */
+  readonly cssModule?: {
+    /** Scan-root-relative path, matching discovery; no import traversal. */
+    readonly stylesheet: string;
+    readonly className: string;
+  };
 }
 
 export interface Resource extends Evidence {

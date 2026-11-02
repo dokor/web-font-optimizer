@@ -17,8 +17,12 @@ analyseurs injectables, contrats d’observation et exemple de rapport v1.
 registre d’analyseurs est vide par défaut ; il ne produit pas encore d’audit
 complet ni de diagnostics.
 
-Le MVP prévoit des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts,
-React et `next/font`, un moteur de diagnostics, des sorties terminal et JSON,
+L’analyseur React est disponible via l’API injectable décrite ci-dessous.
+Son parseur TypeScript et son décodeur de valeurs CSS sont des dépendances
+d’exécution du paquet.
+
+Le reste du MVP prévoit des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts
+et `next/font`, un moteur de diagnostics, des sorties terminal et JSON,
 et une option CI pour échouer sur les doublons certains. Ces fonctions font
 l’objet des lots ci-dessous ; les options `--report json` et
 `--fail-on-duplicates` ne sont pas encore disponibles dans le socle.
@@ -102,6 +106,53 @@ colonnes commencent à 1 (colonnes en unités UTF-16). Conserver les variantes,
 l’ordre des sources de repli et les contextes connus. Omettre un champ inconnu ;
 pour une expression non résolue, émettre une observation `indeterminate` avec
 sa position, son texte et la raison.
+
+## Analyser React et Vite (#4)
+
+```js
+import { reactAnalyzer, scan } from 'web-font-optimizer';
+
+const { files, observations } = await scan('./mon-app-vite', [reactAnalyzer]);
+```
+
+`reactAnalyzer` accepte JS, JSX (également dans `.js`), TS et TSX. Il analyse le
+texte en mémoire, sans lire de configuration, résoudre les imports, installer
+React/Vite/Next, exécuter l’application ou accéder au réseau. La fixture
+`test/fixtures/react-vite` s’analyse sans installer ses dépendances.
+Le registre du binaire reste réservé au lot d’intégration #8.
+
+Les imports ES locaux `.css` et `.scss`, dont les CSS Modules, produisent des
+ressources `react:stylesheet-import`. Leur chemin est normalisé relativement à
+la racine du scan, sans suffixe de requête ou fragment. L’analyseur ne parcourt
+pas ces imports : la découverte du socle visite chaque feuille une seule fois,
+même si plusieurs composants l’importent. Ajouter l’analyseur CSS au registre
+pour extraire le contenu des feuilles ; React n’invente pas leur contenu.
+
+Les attributs JSX `style={{…}}` et les objets `style` explicites des appels à
+`createElement` importé de React produisent des observations pour `fontFamily`,
+`fontWeight`, `fontStyle` et `font`. Les chaînes, nombres de poids, constantes
+primitives locales et enveloppes TypeScript (`as`, `satisfies`) sont reconnus.
+Les usages conservent `value`, la pile de familles et les variantes explicites
+identifiables. Les références `var(--nom)` deviennent des observations
+`variable` et la valeur CSS reste `indeterminate` sans résolution des variables.
+Les expressions dynamiques, objets style indirects, spreads et propriétés
+calculées inconnues restent `indeterminate`, avec texte, raison et position ;
+ils n’interrompent pas le scan. Les raccourcis système (`font: 'menu'`, etc.)
+et les valeurs héritées restent également indéterminés.
+
+Les accès directs `styles.title` et `styles['title']` aux imports par défaut ou
+namespace de `.module.css` / `.module.scss` produisent un usage
+`react:css-module`, avec `cssModule: { stylesheet, className }` et
+`context: 'static-code-reference'`. Les variables locales masquant l’import
+sont respectées ; les clés dynamiques restent indéterminées. Une référence,
+même dans une fonction inutilisée, prouve sa présence dans le code uniquement.
+Elle ne prouve ni l’existence de la classe dans la feuille ni un rendu dans le
+navigateur, et n’attribue aucune famille de police à la classe.
+Les appels et imports `next/font` restent du ressort du lot Next #5.
+
+Validation : `npm run typecheck` puis `npm test`. Les tests React couvrent
+chaque critère d’acceptation, les positions UTF-16, les valeurs inconnues,
+les imports partagés et l’absence de modification de la fixture Vite.
 
 ## Rapport v1 et répartition des lots
 
