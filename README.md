@@ -23,8 +23,8 @@ strictes de confiance certaine. Le même parcours est disponible avec `audit()`.
 
 Les lots #1 à #7 sont livrés sur `main`. Les PR #11 à #16 ont été fusionnées
 ensemble via la [PR #17](https://github.com/dokor/web-font-optimizer/pull/17),
-après validation de la CI sur ses quatre environnements. Le lot #8 est intégré
-dans cette branche et sera marqué livré après fusion de sa PR. Les sections
+après validation de la CI sur ses quatre environnements. Le lot #8 est livré
+sur `main` via la [PR #18](https://github.com/dokor/web-font-optimizer/pull/18). Les sections
 ci-dessous décrivent les capacités et limites de chaque module.
 
 Le suivi d’ensemble et les critères de livraison sont dans
@@ -350,7 +350,7 @@ un emplacement et un conseil. Les sorties peuvent importer `exampleReport` depui
 | [Next (#5)](https://github.com/dokor/web-font-optimizer/issues/5), livré ([PR #14](https://github.com/dokor/web-font-optimizer/pull/14)) | `src/analyzers/next/` | Texte contenant des appels à `next/font` |
 | [Moteur (#6)](https://github.com/dokor/web-font-optimizer/issues/6), livré ([PR #16](https://github.com/dokor/web-font-optimizer/pull/16)) | `src/engine/` | Observations synthétiques → rapport v1 |
 | [Sorties et politique CI (#7)](https://github.com/dokor/web-font-optimizer/issues/7), livré ([PR #15](https://github.com/dokor/web-font-optimizer/pull/15)) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
-| [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8), en recette avant fusion | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
+| [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8), livré ([PR #18](https://github.com/dokor/web-font-optimizer/pull/18)) | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
 
 Les modules restent testables isolément. `src/audit.ts` fournit leur registre
 commun et le pipeline utilisé par la CLI ; les mêmes cas de recette sont lancés
@@ -526,3 +526,5 @@ La recette des deux projets est exécutée avec `npm test`, puis répétée par
 codes 0/1/2, plages Unicode, variables et chevauchement CDN/Next. Les accès HTTP,
 HTTPS, fetch et sockets sont bloqués pendant ces scans ; les chemins, contenus
 et dates de modification des fixtures sont comparés avant et après.
+
+Créé par Antoine LE LOUËT ([https://antoine.lelouet.fr](https://antoine.lelouet.fr)).
