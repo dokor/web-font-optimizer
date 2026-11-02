@@ -1,0 +1,1 @@
+{"name":"font-audit-vite-fixture","private":true,"type":"module","scripts":{"dev":"vite"},"dependencies":{"react":"*","react-dom":"*"},"devDependencies":{"vite":"*"}}

@@ -17,7 +17,7 @@ export function isSystemFamily(value: string): boolean {
 
 /** A global declaration can serve a scoped usage; an unidentified scope is ambiguous. */
 export function canServe(declaration: Observation, usage: Observation): boolean {
-  return declaration.context === undefined || usage.context === undefined || declaration.context === usage.context;
+  return declaration.scope === 'global' || declaration.context === undefined || usage.context === undefined || declaration.context === usage.context;
 }
 
 // Split a literal CSS family list without splitting var() fallbacks or quoted names.
@@ -42,11 +42,15 @@ export interface ResolvedUsage {
   readonly observation: Usage | VariableReference;
   readonly families: readonly string[];
   readonly dynamic: boolean;
+  /** Instance scopes proven by resolving a unique exposed variable definition. */
+  readonly providers: readonly string[];
 }
 
 export function resolveUsages(observations: readonly Observation[]): ResolvedUsage[] {
   const definitions = observations.filter((o): o is VariableReference => o.kind === 'variable' && o.action === 'define');
-  function resolveValue(value: string, usage: Observation, seen: ReadonlySet<string>): { families: string[]; dynamic: boolean } {
+  const exposed = new Set(observations.filter((o): o is VariableReference => o.kind === 'variable' && o.action === 'reference'
+    && o.origin === 'next/font/variable').map(o => JSON.stringify([o.context, o.name])));
+  function resolveValue(value: string, usage: Observation, seen: ReadonlySet<string>, providers: Set<string>): { families: string[]; dynamic: boolean } {
     const parts = splitFamilies(value);
     if (!parts.length) return { families: [], dynamic: true };
     let dynamic = false;
@@ -56,12 +60,24 @@ export function resolveUsages(observations: readonly Observation[]): ResolvedUsa
       if (variable?.[1]) {
         const name = variable[1];
         // Prefer definitions in the exact scope over global definitions.
-        const candidates = definitions.filter(d => d.name === name && (d.context === undefined || d.context === usage.context));
+        let candidates = definitions.filter(d => d.name === name && (d.scope === 'global' || d.context === undefined || d.context === usage.context));
+        const exact = candidates.filter(d => usage.context !== undefined && d.context === usage.context);
+        if (!exact.length) {
+          const exported = definitions.filter(d => d.name === name && d.origin.startsWith('next/font/')
+            && exposed.has(JSON.stringify([d.context, d.name])));
+          if (exported.length) {
+            // Competing CSS/Next bindings or multiple exposed instances have no known DOM precedence.
+            candidates = !candidates.length && new Set(exported.map(d => d.context)).size === 1 ? exported : [];
+          }
+        }
         const scoped = candidates.filter(d => usage.context !== undefined && d.context === usage.context);
         const values = new Set((scoped.length ? scoped : candidates).map(d => d.value ?? d.family));
         const [resolved] = values;
         if (!seen.has(name) && values.size === 1 && resolved !== undefined) {
-          const result = resolveValue(resolved, usage, new Set([...seen, name]));
+          for (const candidate of scoped.length ? scoped : candidates) {
+            if (candidate.context !== undefined && candidate.origin.startsWith('next/font/')) providers.add(candidate.context);
+          }
+          const result = resolveValue(resolved, usage, new Set([...seen, name]), providers);
           families.push(...result.families); dynamic ||= result.dynamic;
         } else {
           // A fallback cannot establish the runtime value of an unresolved variable.
@@ -75,11 +91,13 @@ export function resolveUsages(observations: readonly Observation[]): ResolvedUsa
   }
   return observations.flatMap(observation => {
     if (observation.kind !== 'usage' && !(observation.kind === 'variable' && observation.action === 'reference')) return [];
+    if (observation.origin === 'next/font/variable') return []; // Exposure alone is not consumption.
     const values = observation.kind === 'usage'
       ? observation.familyStack?.length ? observation.familyStack : observation.family ? [observation.family] : []
       : [observation.family ?? observation.value ?? `var(${observation.name})`];
-    const resolved = values.map(value => resolveValue(value, observation, new Set()));
+    const providers = new Set<string>();
+    const resolved = values.map(value => resolveValue(value, observation, new Set(), providers));
     return [{ observation, families: [...new Set(resolved.flatMap(r => r.families))],
-      dynamic: !values.length || resolved.some(r => r.dynamic) }];
+      dynamic: !values.length || resolved.some(r => r.dynamic), providers: [...providers] }];
   });
 }

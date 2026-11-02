@@ -4,6 +4,7 @@ import type { Analyzer, Observation } from './contracts.js';
 import { discoverSources, type DiscoveredFile } from './discovery.js';
 
 export interface ScanResult {
+  readonly root: string;
   readonly files: readonly DiscoveredFile[];
   readonly observations: readonly Observation[];
 }
@@ -25,5 +26,5 @@ export async function scan(target = '.', analyzers: readonly Analyzer[] = []): P
       }
     }
   }
-  return { files, observations };
+  return { root, files, observations };
 }
