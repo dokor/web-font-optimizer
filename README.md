@@ -17,6 +17,10 @@ analyseurs injectables, contrats d’observation et exemple de rapport v1.
 registre d’analyseurs est vide par défaut ; il ne produit pas encore d’audit
 complet ni de diagnostics.
 
+L’analyseur HTML et le décodeur Google Fonts sont disponibles via l’API
+optionnelle décrite ci-dessous. Leur branchement au registre de production
+appartient au lot d’intégration.
+
 Le MVP prévoit des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts,
 React et `next/font`, un moteur de diagnostics, des sorties terminal et JSON,
 et une option CI pour échouer sur les doublons certains. Ces fonctions font
@@ -137,3 +141,58 @@ ajouter ses tests et ses fixtures sans modifier le registre des autres.
   inconnue sans téléchargement.
 - Les correctifs automatiques, le rapport Markdown, les plugins de formatage
   et le score global sont hors du périmètre du MVP.
+
+## HTML et Google Fonts (#3)
+
+L’analyseur optionnel utilise `parse5` pour lire les balises et leurs positions
+sans exécuter le document.
+
+```ts
+import { htmlAnalyzer, scan, decodeGoogleFontsUrl } from 'web-font-optimizer';
+
+const result = await scan('./index.html', [htmlAnalyzer]);
+const request = decodeGoogleFontsUrl(
+  'https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;1,700&family=Lora',
+  { file: 'src/style.css', line: 1, column: 14 },
+);
+```
+
+`htmlAnalyzer` (ou `analyzeHtml(source)` pour du texte en mémoire) recense les
+`link[rel=stylesheet]`, `link[rel=preload][as=font]` et `link[rel=preconnect]`.
+Chaque ressource conserve le contenu original du `href`, y compris les entités
+comme `&amp;`, et la position du premier caractère de sa valeur. Les commentaires,
+les chaînes des scripts et les contenus inertes des `template` sont ignorés.
+Le HTML est interprété avec les scripts activés : le contenu de `noscript` est
+donc ignoré. Aucun script n’est exécuté.
+
+Seules les feuilles Google Fonts produisent des observations `declaration` de
+familles et variantes. Une préconnexion ou un préchargement reste une ressource,
+sans famille ni preuve d’usage. L’analyse ne télécharge aucune ressource et
+n’émet aucune observation `usage`.
+
+Le décodeur pur `decodeGoogleFontsUrl(url, location)` accepte les URL HTTP(S) et
+les URL sans protocole vers `fonts.googleapis.com/css` ou `/css2` ; il retourne
+`undefined` pour les autres sources. Il reçoit une URL extraite de sa syntaxe :
+le parseur HTML décode les entités ; l’appelant CSS doit décoder les échappements
+CSS avant l’appel. Le résultat conserve l’URL fournie et sa position, sans
+normaliser la preuve originale.
+
+Les familles multiples, les alias CSS (`bold`, `italic`, `bi`, `700i`…), les
+tuples CSS2 `ital,wght` et les intervalles variables sont décodés. Les axes
+`wght`, `ital` et `wdth` sont représentés par `weight`, `style` et `stretch` ;
+les valeurs par défaut connues sont 400 et normal, les intervalles sont conservés
+comme `100 900`. `display` et `subset` sont conservés quand présents.
+Les syntaxes et axes non compris produisent `complete: false` et des `issues` ;
+les familles et variantes comprises restent disponibles. Le HTML conserve la
+ressource et ajoute des observations `indeterminate` avec leur position et la
+raison, même si aucune famille n’a pu être décodée. Cette lecture n’est pas une
+validation de la disponibilité d’une famille ou de toutes les contraintes de
+l’API Google Fonts.
+
+Le registre par défaut et la CLI restent au socle de découverte. Le branchement
+aux observations CSS et au registre de production appartient au lot #8.
+
+Références de syntaxe : [API CSS](https://developers.google.com/fonts/docs/getting_started)
+et [API CSS2](https://developers.google.com/fonts/docs/css2). Les cas d’acceptation
+sont dans `test/html.test.js`, `test/google-fonts.test.js` et
+`test/fixtures/html/vite/index.html`.
