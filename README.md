@@ -11,17 +11,19 @@ pas les polices ni les feuilles de style distantes.
 
 ## État actuel
 
-Le socle est disponible sur `main` : découverte des fichiers, API de scan avec
-analyseurs injectables, contrats d’observation et exemple de rapport v1.
-**Le binaire découvre actuellement les sources et affiche leur nombre.** Son
-registre d’analyseurs est vide par défaut ; il ne produit pas encore d’audit
-complet ni de diagnostics.
+Les analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts, React et `next/font`
+sont utilisables via l’API injectable. Le moteur `buildAuditReport` transforme
+leurs observations en rapport v1 ; les reporters terminal et JSON ainsi que la
+politique sur les doublons certains sont disponibles.
 
-Le MVP prévoit des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts,
-React et `next/font`, un moteur de diagnostics, des sorties terminal et JSON,
-et une option CI pour échouer sur les doublons certains. Ces fonctions font
-l’objet des lots ci-dessous ; les options `--report json` et
-`--fail-on-duplicates` ne sont pas encore disponibles dans le socle.
+**La CLI accepte `--report terminal|json` et `--fail-on-duplicates`, mais son
+registre est encore vide et son moteur n’est pas raccordé.** Elle produit donc
+un inventaire vide. Le lot [#8](https://github.com/dokor/web-font-optimizer/issues/8)
+doit assembler le parcours de production et le valider sur React/Vite et Next.js.
+
+Les lots #2 à #7 sont réunis dans la branche de fusion des PR #11 à #16 ; leur
+statut de livraison sera actualisé après fusion sur `main`. Les sections de
+chaque lot ci-dessous décrivent leurs capacités et limites propres.
 
 Le suivi d’ensemble et les critères de livraison sont dans
 [l’issue de pilotage #9](https://github.com/dokor/web-font-optimizer/issues/9).
@@ -35,8 +37,10 @@ npm ci
 npm run typecheck
 npm run build
 npm test
+npm run test:package
 npm exec --offline -- web-font-optimizer --help
 npm exec --offline -- web-font-optimizer scan ./src
+npm exec --offline -- web-font-optimizer scan ./src --report json --fail-on-duplicates
 ```
 
 Ces commandes utilisent le binaire construit depuis le dépôt et ne nécessitent
@@ -50,7 +54,15 @@ npm exec --offline -- web-font-optimizer scan ./src/discovery.ts
 ```
 
 ```text
-Fichiers sources découverts : 1
+Audit des polices — rapport v1
+Inventaire : 0 observation(s), 0 ressource(s) distincte(s)
+  Aucune observation.
+
+Ressources distinctes :
+  Aucune ressource.
+
+Diagnostics : 0
+  Aucun diagnostic.
 ```
 
 `scan [chemin]` accepte un répertoire (par défaut, le répertoire courant) ou
@@ -59,10 +71,57 @@ CSS, SCSS, JS, JSX, TS et TSX, y compris les CSS Modules. Elle ignore les
 répertoires `node_modules`, `.next`, `dist`, `build` et `.git` et ne suit pas
 les liens symboliques rencontrés.
 
-| Code de sortie actuel | Signification |
+## Sorties et statut CI
+
+`scan [chemin]` rend par défaut l’inventaire, les ressources distinctes et les
+diagnostics dans le terminal. Chaque diagnostic indique sa règle, sa gravité,
+sa certitude, tous ses emplacements `fichier:ligne:colonne` et l’action proposée.
+Les familles, contextes et variantes sont repris des observations aux mêmes
+emplacements ; aucune variante inconnue n’est déduite. Les tailles inconnues
+restent inconnues ; les tailles sur disque ne mesurent pas une économie réseau.
+
+`--report json` (ou `--report=json`) écrit uniquement le rapport `AuditReportV1`
+sur stdout, sans couleur ni préambule. Les erreurs d’invocation, d’accès ou
+d’exécution vont sur stderr. Le JSON reste complet et parseable lorsqu’un
+doublon déclenche le statut CI. `--report terminal` sélectionne explicitement
+le rendu terminal. Les options peuvent précéder ou suivre le chemin ; `--`
+permet de passer un chemin commençant par un tiret.
+
+| Code | Signification |
 | --- | --- |
-| `0` | Aide affichée ou découverte réussie |
-| `2` | Arguments invalides, chemin inaccessible, extension non prise en charge ou erreur d’exécution ; message sur stderr |
+| `0` | Aide ou audit accepté, y compris avec avertissements ou doublons sans option CI |
+| `1` | `--fail-on-duplicates` activé et au moins un diagnostic `duplicate-load` de confiance `certain` |
+| `2` | Invocation invalide, chemin inaccessible/non pris en charge ou erreur d’exécution |
+
+La politique CI utilise uniquement l’identifiant de règle et la confiance du
+diagnostic, quelle que soit sa gravité. Les doublons possibles ou probables et
+les autres règles restent consultatifs, même avec `--fail-on-duplicates`.
+
+Pour tester ou raccorder les sorties indépendamment du moteur :
+
+```ts
+import { exampleReport } from 'web-font-optimizer/examples/report-v1';
+import { renderTerminal, renderJson, getExitCode, runCli } from 'web-font-optimizer/reporters';
+
+process.stdout.write(renderTerminal(exampleReport));
+const json = renderJson(exampleReport);
+const status = getExitCode(exampleReport, { failOnDuplicates: true }); // 0
+
+// Le pipeline injecté doit retourner le rapport du moteur ; il est appelé une fois.
+const code = await runCli(['scan', '.', '--report', 'json', '--fail-on-duplicates'], {
+  audit: async target => exampleReport, // Remplacer par le pipeline scan → moteur.
+  stdout: text => { process.stdout.write(text); },
+  stderr: text => { process.stderr.write(text); },
+});
+process.exitCode = code;
+```
+
+Les deux reporters et la politique consomment le même rapport sans recalculer
+les règles ni modifier le résultat du moteur. `runCli` retourne le code de sortie
+sans modifier les variables globales du processus. `npm test` vérifie les rapports
+vide, consultatif et avec doublon certain, les deux formats, les codes réels de
+processus et les erreurs de chemin. Les tests avec diagnostic injectent un
+rapport synthétique, en attendant le raccordement de production du lot #8.
 
 ## Écrire et tester un analyseur
 
@@ -103,9 +162,137 @@ l’ordre des sources de repli et les contextes connus. Omettre un champ inconnu
 pour une expression non résolue, émettre une observation `indeterminate` avec
 sa position, son texte et la raison.
 
+## Analyseur CSS et SCSS
+
+```ts
+import { scan } from 'web-font-optimizer';
+import { cssAnalyzer } from 'web-font-optimizer/analyzers/css';
+
+const result = await scan('./src', [cssAnalyzer]);
+console.log(result.observations);
+```
+
+L’analyseur fonctionne également en mémoire avec `cssAnalyzer.analyze`.
+Il utilise PostCSS, son parseur SCSS et `postcss-value-parser`, sans dépendance
+à un framework.
+Il accepte CSS, SCSS et leurs CSS Modules. Il conserve les déclarations
+`@font-face`, leurs sources ordonnées, les ressources et les imports avec
+leurs URL brutes. Il extrait les piles de familles, graisses et styles des
+propriétés explicites et du raccourci `font`. Les observations d’usage d’un
+même bloc partagent un contexte de sélecteur et d’ancêtres (dont `@media`).
+Les positions pointent au début de la déclaration, du descripteur de ressource
+ou de la directive ; les références de variables pointent sur la référence.
+
+Les alias simples suivent la portée lexicale SCSS ou une définition CSS locale
+ou `:root` unique et inconditionnelle. Une pile de repli de `var()` est utilisable
+si aucune définition du nom n’existe dans le fichier. Les cycles, définitions
+concurrentes, interpolations, valeurs calculées non prises en charge et portées
+SCSS conditionnelles produisent des observations indéterminées. Les observations
+statiques du reste du fichier sont conservées.
+
+L’analyse ne résout pas la cascade du navigateur, les alias entre fichiers ni
+les mixins et fonctions Sass. Un poids isolé ne reçoit pas de famille inférée.
+Les imports ne sont ni téléchargés ni exécutés. Le décodeur Google Fonts du
+lot #3 est disponible via l’API ; son raccordement aux imports CSS et
+l’enregistrement dans la CLI restent au lot #8.
+
+## Analyser React et Vite (#4)
+
+```js
+import { reactAnalyzer, scan } from 'web-font-optimizer';
+
+const { files, observations } = await scan('./mon-app-vite', [reactAnalyzer]);
+```
+
+`reactAnalyzer` accepte JS, JSX (également dans `.js`), TS et TSX. Il analyse le
+texte en mémoire, sans lire de configuration, résoudre les imports, installer
+React/Vite/Next, exécuter l’application ou accéder au réseau. La fixture
+`test/fixtures/react-vite` s’analyse sans installer ses dépendances.
+Le registre du binaire reste réservé au lot d’intégration #8.
+
+Les imports ES locaux `.css` et `.scss`, dont les CSS Modules, produisent des
+ressources `react:stylesheet-import`. Leur chemin est normalisé relativement à
+la racine du scan, sans suffixe de requête ou fragment. L’analyseur ne parcourt
+pas ces imports : la découverte du socle visite chaque feuille une seule fois,
+même si plusieurs composants l’importent. Ajouter l’analyseur CSS au registre
+pour extraire le contenu des feuilles ; React n’invente pas leur contenu.
+
+Les attributs JSX `style={{…}}` et les objets `style` explicites des appels à
+`createElement` importé de React produisent des observations pour `fontFamily`,
+`fontWeight`, `fontStyle` et `font`. Les chaînes, nombres de poids, constantes
+primitives locales et enveloppes TypeScript (`as`, `satisfies`) sont reconnus.
+Les usages conservent `value`, la pile de familles et les variantes explicites
+identifiables. Les références `var(--nom)` deviennent des observations
+`variable` et la valeur CSS reste `indeterminate` sans résolution des variables.
+Les expressions dynamiques, objets style indirects, spreads et propriétés
+calculées inconnues restent `indeterminate`, avec texte, raison et position ;
+ils n’interrompent pas le scan. Les raccourcis système (`font: 'menu'`, etc.)
+et les valeurs héritées restent également indéterminés.
+
+Les accès directs `styles.title` et `styles['title']` aux imports par défaut ou
+namespace de `.module.css` / `.module.scss` produisent un usage
+`react:css-module`, avec `cssModule: { stylesheet, className }` et
+`context: 'static-code-reference'`. Les variables locales masquant l’import
+sont respectées ; les clés dynamiques restent indéterminées. Une référence,
+même dans une fonction inutilisée, prouve sa présence dans le code uniquement.
+Elle ne prouve ni l’existence de la classe dans la feuille ni un rendu dans le
+navigateur, et n’attribue aucune famille de police à la classe.
+Les appels et imports `next/font` restent du ressort du lot Next #5.
+
+Validation : `npm run typecheck` puis `npm test`. Les tests React couvrent
+chaque critère d’acceptation, les positions UTF-16, les valeurs inconnues,
+les imports partagés et l’absence de modification de la fixture Vite.
+
+## Adaptateur Next.js (opt-in)
+
+```ts
+import { scan } from 'web-font-optimizer';
+import { nextAnalyzer } from 'web-font-optimizer/analyzers/next';
+
+const result = await scan('./src', [nextAnalyzer]);
+```
+
+L’adaptateur analyse JS, JSX, TS et TSX qui importent `next/font/google` ou
+`next/font/local`. Il suit les alias d’import, les imports namespace, les alias
+`const` des chargeurs et des instances, ainsi que les propriétés déstructurées.
+Les portées lexicales empêchent de confondre une instance avec un paramètre de
+même nom. Il n’exécute aucun code et ne lit ni modules importés ni fichiers de
+polices. Next.js n’a pas besoin d’être installé dans le projet analysé.
+
+Les options explicites `weight`, `style`, `subsets`, `display`, `src` et `variable`
+sont conservées. Les expressions dynamiques, propriétés abrégées et spreads
+non résolus produisent des observations `indeterminate` positionnées. Un spread
+invalide les options précédentes qu’il pourrait remplacer ; les options
+explicites suivantes restent connues. Les assertions de type et `satisfies`
+n’empêchent pas de lire un objet littéral. Les constantes d’options externes
+et les imports d’instances depuis un autre fichier ne sont pas résolus.
+
+Une famille Google conserve son nom public (`Roboto_Mono` → `Roboto Mono`),
+comparable au nom décodé dans une URL Google Fonts. Aucune URL CDN n’est inventée :
+Next héberge lui-même les fichiers générés. Une famille locale inconnue reçoit
+l’identité `local:<fichier>:<ligne>:<colonne>` du chargeur. Chaque fichier local
+conserve son chemin relatif et sa variante dans une déclaration et une ressource
+distinctes ; toutes les sources d’un chargeur partagent cette identité et son
+`context`.
+
+Les applications JSX de `.className` et `.style` émettent des usages liés à
+l’instance. L’option `variable` définit une correspondance nom CSS → famille ;
+son application JSX via `.variable` produit une référence d’origine
+`next/font/variable`, sans usage de famille. Une consommation dans une propriété
+JSX `style={{ fontFamily: 'var(--font-...)' }}` produit une référence d’origine
+`font-family`. Les références des feuilles CSS/SCSS externes appartiennent à
+l’analyseur CSS ; elles peuvent être rapprochées de la définition par le nom de
+variable. Le moteur du lot #6 est disponible via l’API pour rapprocher ces observations ;
+le registre de production reste au lot #8.
+
+Les fixtures `test/fixtures/next/` et les tests `test/next.test.js` couvrent les
+alias Google, les sources locales multiples, l’exposition et la consommation
+des variables, les options dynamiques, l’absence d’import Next et un scan sans
+écriture ni exécution du projet.
+
 ## Rapport v1 et répartition des lots
 
-Le contrat `AuditReportV1` définit le rapport JSON que le moteur devra produire
+Le contrat `AuditReportV1` définit le rapport JSON produit par `buildAuditReport`
 à partir des observations. L’inventaire conserve les observations et les
 ressources distinctes ; `sizeBytes` est absent si la taille est inconnue.
 Un diagnostic lie un `ruleId` stable à une gravité, une confiance, au moins
@@ -123,8 +310,8 @@ un emplacement et un conseil. Les sorties peuvent importer `exampleReport` depui
 | [Sorties et politique CI (#7)](https://github.com/dokor/web-font-optimizer/issues/7) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
 | [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8) | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
 
-Les chemins des lots suivants sont des emplacements proposés. Chaque lot peut
-ajouter ses tests et ses fixtures sans modifier le registre des autres.
+Les lots #2 à #7 restent indépendants du registre de production. Le lot #8
+raccordera leurs points d’extension et complétera les tests de bout en bout.
 
 ## Limites et périmètre
 
@@ -132,8 +319,148 @@ ajouter ses tests et ses fixtures sans modifier le registre des autres.
   dans le navigateur. L’absence d’usage statique ne prouve pas qu’elle est inutile.
 - Les expressions dynamiques ou les rapprochements ambigus doivent rester
   signalés comme tels ; ils ne justifient pas une suppression automatique.
-- La taille sur disque d’une ressource locale, lorsqu’elle sera inventoriée,
+- La taille sur disque d’une ressource locale, inventoriée par l’API du moteur,
   ne mesure pas une économie réseau. La taille des ressources distantes reste
   inconnue sans téléchargement.
 - Les correctifs automatiques, le rapport Markdown, les plugins de formatage
   et le score global sont hors du périmètre du MVP.
+
+## HTML et Google Fonts (#3)
+
+L’analyseur optionnel utilise `parse5` pour lire les balises et leurs positions
+sans exécuter le document.
+
+```ts
+import { htmlAnalyzer, scan, decodeGoogleFontsUrl } from 'web-font-optimizer';
+
+const result = await scan('./index.html', [htmlAnalyzer]);
+const request = decodeGoogleFontsUrl(
+  'https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;1,700&family=Lora',
+  { file: 'src/style.css', line: 1, column: 14 },
+);
+```
+
+`htmlAnalyzer` (ou `analyzeHtml(source)` pour du texte en mémoire) recense les
+`link[rel=stylesheet]`, `link[rel=preload][as=font]` et `link[rel=preconnect]`.
+Chaque ressource conserve le contenu original du `href`, y compris les entités
+comme `&amp;`, et la position du premier caractère de sa valeur. Les commentaires,
+les chaînes des scripts et les contenus inertes des `template` sont ignorés.
+Le HTML est interprété avec les scripts activés : le contenu de `noscript` est
+donc ignoré. Aucun script n’est exécuté.
+
+Seules les feuilles Google Fonts produisent des observations `declaration` de
+familles et variantes. Une préconnexion ou un préchargement reste une ressource,
+sans famille ni preuve d’usage. L’analyse ne télécharge aucune ressource et
+n’émet aucune observation `usage`.
+
+Le décodeur pur `decodeGoogleFontsUrl(url, location)` accepte les URL HTTP(S) et
+les URL sans protocole vers `fonts.googleapis.com/css` ou `/css2` ; il retourne
+`undefined` pour les autres sources. Il reçoit une URL extraite de sa syntaxe :
+le parseur HTML décode les entités ; l’appelant CSS doit décoder les échappements
+CSS avant l’appel. Le résultat conserve l’URL fournie et sa position, sans
+normaliser la preuve originale.
+
+Les familles multiples, les alias CSS (`bold`, `italic`, `bi`, `700i`…), les
+tuples CSS2 `ital,wght` et les intervalles variables sont décodés. Les axes
+`wght`, `ital` et `wdth` sont représentés par `weight`, `style` et `stretch` ;
+les valeurs par défaut connues sont 400 et normal, les intervalles sont conservés
+comme `100 900`. `display` et `subset` sont conservés quand présents.
+Les syntaxes et axes non compris produisent `complete: false` et des `issues` ;
+les familles et variantes comprises restent disponibles. Le HTML conserve la
+ressource et ajoute des observations `indeterminate` avec leur position et la
+raison, même si aucune famille n’a pu être décodée. Cette lecture n’est pas une
+validation de la disponibilité d’une famille ou de toutes les contraintes de
+l’API Google Fonts.
+
+Le registre CLI reste vide. Le branchement aux imports CSS et au registre de
+production appartient au lot #8.
+
+Références de syntaxe : [API CSS](https://developers.google.com/fonts/docs/getting_started)
+et [API CSS2](https://developers.google.com/fonts/docs/css2). Les cas d’acceptation
+sont dans `test/html.test.js`, `test/google-fonts.test.js` et
+`test/fixtures/html/vite/index.html`.
+
+## Rapprocher les observations (#6)
+
+`buildAuditReport` est exporté depuis `web-font-optimizer`. Il accepte les
+observations du contrat partagé, y compris des entrées synthétiques, sans
+registre d’analyseurs ni exécution du projet. Cet exemple réutilise l’analyseur
+`example` défini plus haut :
+
+```ts
+import { buildAuditReport, scan } from 'web-font-optimizer';
+
+const scanResult = await scan('./mon-projet', [example]);
+const report = await buildAuditReport(scanResult.observations, { root: './mon-projet' });
+console.log(JSON.stringify(report, null, 2));
+```
+
+`root` désigne la racine du scan (le dossier parent pour le scan d’un fichier
+seul) et vaut `.` par défaut. Les sources de type `file` sont des chemins de
+fichiers résolus relativement au fichier de l’observation. Le moteur lit leurs
+métadonnées, uniquement à l’intérieur de cette racine, sans écrire ni télécharger
+de ressource. Les URL, les chemins inaccessibles et les répertoires n’ont pas de
+`sizeBytes`. Un fichier local partagé, y compris par plusieurs chemins relatifs
+ou liens symboliques accessibles, n’apparaît qu’une fois dans les ressources,
+avec tous ses emplacements. Sa taille sur disque **ne représente pas une
+économie réseau** : cache, compression, sous-ensembles et formats de repli
+nécessitent une vérification dans le navigateur.
+
+Les observations restent intégralement consultables ; leurs tableaux de
+variantes, sous-ensembles et sources conservent leur ordre. Le moteur trie les
+observations, les ressources, les diagnostics et leurs emplacements pour produire
+le même JSON quel que soit l’ordre d’entrée, sans modifier les entrées. Les
+ressources sont regroupées par identité ; l’observation conserve le chemin
+original de chaque référence, et l’entrée de ressource retient une référence
+représentative choisie de manière déterministe.
+
+| `ruleId` stable | Gravité / confiance | Interprétation |
+| --- | --- | --- |
+| `duplicate-load` | `warning` / `certain` | Même chargement observé à plusieurs emplacements dans un même contexte, avec mêmes origine, variantes, sources ordonnées et descripteurs. Sans contexte explicite, la comparaison stricte reste limitée au même fichier. La certitude porte sur la répétition observée. |
+| `possible-overlap` | `info` / `possible` ou `probable` | Même famille via des origines différentes (par exemple Google Fonts et `next/font`), ou même source dans plusieurs contextes. Une plage de variantes connue et commune dans le même contexte rend le rapprochement probable. |
+| `no-static-usage` | `info` / `possible` | Famille ou variante déclarée/chargée sans usage statique compatible dans sa portée. Vérifier avant de supprimer. |
+| `undeclared-family` | `info` / `possible` | Famille utilisée sans déclaration/chargement connu compatible. Vérifier les feuilles externes et polices installées. |
+
+Les portées sont des identités opaques : une déclaration sans contexte peut
+servir un usage de toute portée ; deux contextes explicites différents ne
+prouvent pas un usage commun. Ils ne prouvent pas non plus que les chargements
+s’excluent à l’exécution, d’où un chevauchement seulement possible. Une portée
+inconnue reste ambiguë. Des `unicode-range` disjoints ou des graisses/styles/
+étirements connus disjoints excluent le chevauchement. Une plage variable couvre
+les graisses incluses ; un descripteur omis reste inconnu. Une graisse isolée
+ne permet jamais de déduire une famille. Les sources d’un même `src` sont des
+formats de repli, et ne constituent pas des chargements répétés.
+
+Les piles génériques et les familles système courantes ne demandent pas de
+déclaration. Les variables CSS littérales et leurs alias sont résolus dans la
+portée connue, avec priorité à une définition de cette portée sur une définition
+globale. Les cycles, définitions contradictoires, expressions dynamiques et
+références non résolues restent indéterminés : ils empêchent de conclure à
+l’absence d’usage dans les portées concernées. Le moteur n’évalue ni la cascade,
+ni le JavaScript, ni la coexistence effective des pages au runtime.
+
+Les tests `test/engine.test.js` couvrent les répétitions, le chevauchement CDN/Next,
+les contre-exemples du MVP, les variables et portées, les tailles et ressources
+manquantes, ainsi que toutes les 120 permutations d’un jeu d’observations mixte.
+
+## CI du dépôt
+
+Le workflow `.github/workflows/ci.yml` s’exécute sur les PR, les push vers `main`
+et à la demande. Il utilise npm et `package-lock.json`, avec Node.js 22 et 24
+sous Linux et Windows : installation propre (`npm ci`), contrôle TypeScript,
+compilation et tous les tests (`npm test`), puis `npm run test:package`.
+
+Ce dernier contrôle construit une archive avec `npm pack`, l’installe dans un
+projet temporaire avec les seules dépendances de production, vérifie tous les
+exports JavaScript et leurs déclarations de types, appelle les analyseurs, le
+moteur et les reporters, puis lance le binaire installé. React, Vite et Next.js
+ne sont pas installés. L’installation des dépendances nécessite le réseau ;
+les scans ne téléchargent aucune ressource. Le test est indépendant de la
+publication npm et ne publie aucun paquet.
+
+Les dépendances d’exécution sont PostCSS, `postcss-scss`,
+`postcss-value-parser`, `parse5` et TypeScript (parseur des sources React/Next).
+Les types Node sont une dépendance de développement. Les actions GitHub sont
+figées sur un commit et le workflow dispose uniquement de la lecture du dépôt.
+La recette complète des deux projets et les statuts du pipeline de production
+restent à ajouter dans #8 ; la CI exécutera ces tests avec `npm test`.

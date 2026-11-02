@@ -1,27 +1,14 @@
 #!/usr/bin/env node
 import { scan } from './scan.js';
+import { runCli } from './reporters/index.js';
 
-const usage = 'Usage : web-font-optimizer scan [chemin]';
-const help = `${usage}
-Découvre les fichiers sources du projet (répertoire courant par défaut).
-  -h, --help    Afficher cette aide.`;
-
-async function main(args: string[]): Promise<void> {
-  const isHelp = (arg?: string) => arg === '-h' || arg === '--help';
-  if ((args.length === 1 && isHelp(args[0])) ||
-      (args.length === 2 && args[0] === 'scan' && isHelp(args[1]))) {
-    console.log(help);
-    return;
-  }
-  const [command, target] = args;
-  if (command !== 'scan' || args.length > 2 || target?.startsWith('-') || target === '') {
-    throw new Error(`Arguments invalides. ${usage} (voir --help).`);
-  }
-  const { files } = await scan(target);
-  console.log(`Fichiers sources découverts : ${files.length}`);
-}
-
-main(process.argv.slice(2)).catch((error: unknown) => {
-  console.error(`web-font-optimizer : ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 2;
+process.exitCode = await runCli(process.argv.slice(2), {
+  async audit(target) {
+    // The foundation registry is empty. #8 will connect the production analyzers
+    // and #6's engine here; reporters do not construct diagnostics or resources.
+    const { observations } = await scan(target);
+    return { version: 1, inventory: { observations, resources: [] }, diagnostics: [] };
+  },
+  stdout: text => { process.stdout.write(text); },
+  stderr: text => { process.stderr.write(text); },
 });

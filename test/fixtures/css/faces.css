@@ -1,0 +1,24 @@
+/* complementary subsets and variable font */
+@font-face {
+  font-family: "Atlas";
+  src: local("Atlas"), url("./atlas-latin.woff2") format("woff2"), url('./atlas-latin.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
+  unicode-range: U+0000-00FF;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atlas";
+  src: url("https://cdn.example/atlas-ext.woff2") format("woff2");
+  font-weight: 100 900;
+  unicode-range: U+0100-024F;
+}
+@import url("https://fonts.googleapis.com/css2?family=Atlas:wght@400;600&display=swap");
+@import "./theme.css" screen;
+@media (min-width: 40em) {
+  .title {
+    font-family: "Atlas", Georgia, serif;
+    font-weight: 600;
+    font-style: italic;
+  }
+}
