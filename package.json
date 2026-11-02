@@ -8,6 +8,7 @@
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
     "./contracts": { "types": "./dist/contracts.d.ts", "import": "./dist/contracts.js" },
+    "./reporters": { "types": "./dist/reporters/index.d.ts", "import": "./dist/reporters/index.js" },
     "./examples/report-v1": { "types": "./dist/examples/report-v1.d.ts", "import": "./dist/examples/report-v1.js" }
   },
   "files": ["dist"],
