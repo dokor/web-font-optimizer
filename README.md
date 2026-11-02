@@ -325,8 +325,9 @@ l’analyseur CSS ; elles peuvent être rapprochées de la définition par le no
 variable. Le moteur ignore l’exposition `.variable` lorsqu’il recense les usages.
 Une définition Next exposée et unique peut résoudre une consommation de même
 nom dans une feuille CSS externe ou un style React. Plusieurs instances exposées
-avec ce nom ou une définition CSS concurrente restent ambiguës. Le contexte de l’instance est conservé pour le
-rapprochement ; cela ne prouve ni héritage DOM ni rendu navigateur. L’adaptateur
+avec ce nom ou une définition CSS concurrente restent ambiguës. Le contexte
+de l’instance est conservé pour le rapprochement ; cela ne prouve ni héritage
+DOM ni rendu navigateur. L’adaptateur
 fait partie du registre de production.
 
 Les fixtures `test/fixtures/next/` et les tests `test/next.test.js` couvrent les
@@ -483,8 +484,8 @@ représentative choisie de manière déterministe.
 | `undeclared-family` | `info` / `possible` | Famille utilisée sans déclaration/chargement connu compatible. Vérifier les feuilles externes et polices installées. |
 
 Les portées sont des identités opaques : une déclaration sans contexte ou avec
-`scope: 'global'` peut
-servir un usage de toute portée ; deux contextes explicites différents ne
+`scope: 'global'` peut servir un usage de toute portée ; deux contextes
+explicites différents ne
 prouvent pas un usage commun. Ils ne prouvent pas non plus que les chargements
 s’excluent à l’exécution, d’où un chevauchement seulement possible. Une portée
 inconnue reste ambiguë. Des `unicode-range` disjoints ou des graisses/styles/
@@ -529,3 +530,5 @@ La recette des deux projets est exécutée avec `npm test`, puis répétée par
 codes 0/1/2, plages Unicode, variables et chevauchement CDN/Next. Les accès HTTP,
 HTTPS, fetch et sockets sont bloqués pendant ces scans ; les chemins, contenus
 et dates de modification des fixtures sont comparés avant et après.
+
+Créé par Antoine LE LOUËT ([https://antoine.lelouet.fr](https://antoine.lelouet.fr)).
