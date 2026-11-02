@@ -3,8 +3,8 @@ import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promise
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { scan } from 'web-font-optimizer';
-import { nextAnalyzer } from 'web-font-optimizer/analyzers/next';
+import { scan } from '@alelouet/web-font-optimizer';
+import { nextAnalyzer } from '@alelouet/web-font-optimizer/analyzers/next';
 
 const analyze = (text, language = 'tsx', file = 'app/page.tsx') =>
   nextAnalyzer.analyze({ text, language, file });

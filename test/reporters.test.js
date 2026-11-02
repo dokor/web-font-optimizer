@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { exampleReport } from 'web-font-optimizer/examples/report-v1';
-import { getExitCode, renderJson, renderTerminal, runCli } from 'web-font-optimizer/reporters';
+import { exampleReport } from '@alelouet/web-font-optimizer/examples/report-v1';
+import { getExitCode, renderJson, renderTerminal, runCli } from '@alelouet/web-font-optimizer/reporters';
 
 const empty = { version: 1, inventory: { observations: [], resources: [] }, diagnostics: [] };
 const duplicate = JSON.parse(await readFile(new URL('./fixtures/duplicate-report.json', import.meta.url), 'utf8'));

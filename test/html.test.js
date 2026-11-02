@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { analyzeHtml, decodeGoogleFontsUrl, htmlAnalyzer, scan } from 'web-font-optimizer';
+import { analyzeHtml, decodeGoogleFontsUrl, htmlAnalyzer, scan } from '@alelouet/web-font-optimizer';
 
 const analyze = text => analyzeHtml({ file: 'index.html', language: 'html', text });
 const declarations = observations => observations.filter(observation => observation.kind === 'declaration');

@@ -1,4 +1,4 @@
-# web-font-optimizer
+# @alelouet/web-font-optimizer
 
 CLI d’audit statique des polices web, développée en TypeScript pour
 **Node.js 22 ou ultérieur** (ES modules).
@@ -24,13 +24,37 @@ strictes de confiance certaine. Le même parcours est disponible avec `audit()`.
 Les lots #1 à #8 sont livrés sur `main`. Les PR #11 à #16 ont été fusionnées
 ensemble via la [PR #17](https://github.com/dokor/web-font-optimizer/pull/17),
 et le parcours complet via la [PR #18](https://github.com/dokor/web-font-optimizer/pull/18).
-La CI a validé les 114 tests et le paquet installé sur ses quatre environnements.
+La recette du MVP a validé 114 tests et le paquet installé sur quatre environnements.
 La [recette finale du MVP](docs/recette-mvp.md) relie les critères de livraison
 aux tests et aux résultats sur React/Vite et Next.js. Les sections ci-dessous
 décrivent les capacités et limites de chaque module.
 
 Le suivi d’ensemble et les critères de livraison sont dans
 [l’issue de pilotage #9](https://github.com/dokor/web-font-optimizer/issues/9).
+
+La distribution npm est préparée sous **`@alelouet/web-font-optimizer`**,
+version **0.1.0**, avec la **licence MIT**. La publication effective reste à
+vérifier sur npm ; la CI de ce dépôt ne constitue pas une preuve de publication.
+Le [guide de publication](docs/publication.md) décrit l’amorçage depuis GitHub
+et le raccordement OIDC au compte `alelouet`.
+
+## Installer depuis npm après publication
+
+```sh
+npx --yes @alelouet/web-font-optimizer scan ./mon-projet
+npx --yes @alelouet/web-font-optimizer scan ./mon-projet --report json --fail-on-duplicates
+```
+
+Pour une installation globale :
+
+```sh
+npm install --global @alelouet/web-font-optimizer
+web-font-optimizer scan ./mon-projet
+```
+
+Le nom du paquet comporte le scope `@alelouet` ; la commande installée reste
+`web-font-optimizer`. Les commandes ci-dessous permettent de tester le dépôt
+avant toute publication.
 
 ## Démarrer depuis le dépôt
 
@@ -104,8 +128,8 @@ les autres règles restent consultatifs, même avec `--fail-on-duplicates`.
 Pour tester ou raccorder les sorties indépendamment du moteur :
 
 ```ts
-import { exampleReport } from 'web-font-optimizer/examples/report-v1';
-import { renderTerminal, renderJson, getExitCode, runCli } from 'web-font-optimizer/reporters';
+import { exampleReport } from '@alelouet/web-font-optimizer/examples/report-v1';
+import { renderTerminal, renderJson, getExitCode, runCli } from '@alelouet/web-font-optimizer/reporters';
 
 process.stdout.write(renderTerminal(exampleReport));
 const json = renderJson(exampleReport);
@@ -131,7 +155,7 @@ sur les fixtures React/Vite et Next, avec les statuts 0, 1 et 2.
 ## Parcours de production (#8)
 
 ```ts
-import { audit, productionAnalyzers, scan } from 'web-font-optimizer';
+import { audit, productionAnalyzers, scan } from '@alelouet/web-font-optimizer';
 
 const report = await audit('./mon-projet');
 const result = await scan('./mon-projet', productionAnalyzers);
@@ -162,13 +186,13 @@ ajoute le chevauchement Inter entre CDN et `next/font`, avec les deux emplacemen
 
 ## Écrire et tester un analyseur
 
-Importer les types depuis `web-font-optimizer/contracts`. Un analyseur reçoit
+Importer les types depuis `@alelouet/web-font-optimizer/contracts`. Un analyseur reçoit
 le texte UTF-8 d’un fichier et retourne des observations, directement ou via une
 promesse. Il travaille sur ce texte sans écrire, exécuter le projet ni télécharger
 de ressource. Pour le tester isolément, appeler `analyze` avec un exemple en mémoire :
 
 ```ts
-import type { Analyzer } from 'web-font-optimizer/contracts';
+import type { Analyzer } from '@alelouet/web-font-optimizer/contracts';
 
 const example: Analyzer = {
   id: 'example-css',
@@ -188,7 +212,7 @@ const observations = await example.analyze({
 ```
 
 Pour passer par la découverte réelle, appeler `scan(chemin, [example])` depuis
-`web-font-optimizer`. Le registre est la liste fournie à cet appel. Un fichier
+`@alelouet/web-font-optimizer`. Le registre est la liste fournie à cet appel. Un fichier
 partagé par plusieurs analyseurs est lu une seule fois, puis transmis dans
 l’ordre du registre. Le résultat sépare les fichiers découverts des observations.
 
@@ -202,8 +226,8 @@ sa position, son texte et la raison.
 ## Analyseur CSS et SCSS
 
 ```ts
-import { scan } from 'web-font-optimizer';
-import { cssAnalyzer } from 'web-font-optimizer/analyzers/css';
+import { scan } from '@alelouet/web-font-optimizer';
+import { cssAnalyzer } from '@alelouet/web-font-optimizer/analyzers/css';
 
 const result = await scan('./src', [cssAnalyzer]);
 console.log(result.observations);
@@ -238,7 +262,7 @@ conservées. L’analyseur est enregistré dans la CLI et dans `audit()`.
 ## Analyser React et Vite (#4)
 
 ```js
-import { reactAnalyzer, scan } from 'web-font-optimizer';
+import { reactAnalyzer, scan } from '@alelouet/web-font-optimizer';
 
 const { files, observations } = await scan('./mon-app-vite', [reactAnalyzer]);
 ```
@@ -286,8 +310,8 @@ les imports partagés et l’absence de modification de la fixture Vite.
 ## Adaptateur Next.js (opt-in)
 
 ```ts
-import { scan } from 'web-font-optimizer';
-import { nextAnalyzer } from 'web-font-optimizer/analyzers/next';
+import { scan } from '@alelouet/web-font-optimizer';
+import { nextAnalyzer } from '@alelouet/web-font-optimizer/analyzers/next';
 
 const result = await scan('./src', [nextAnalyzer]);
 ```
@@ -342,7 +366,7 @@ Le contrat `AuditReportV1` définit le rapport JSON produit par `buildAuditRepor
 ressources distinctes ; `sizeBytes` est absent si la taille est inconnue.
 Un diagnostic lie un `ruleId` stable à une gravité, une confiance, au moins
 un emplacement et un conseil. Les sorties peuvent importer `exampleReport` depuis
-`web-font-optimizer/examples/report-v1` sans lancer de scan.
+`@alelouet/web-font-optimizer/examples/report-v1` sans lancer de scan.
 
 | Lot | Point d’extension | Validation isolée |
 | --- | --- | --- |
@@ -392,7 +416,7 @@ L’analyseur optionnel utilise `parse5` pour lire les balises et leurs position
 sans exécuter le document.
 
 ```ts
-import { htmlAnalyzer, scan, decodeGoogleFontsUrl } from 'web-font-optimizer';
+import { htmlAnalyzer, scan, decodeGoogleFontsUrl } from '@alelouet/web-font-optimizer';
 
 const result = await scan('./index.html', [htmlAnalyzer]);
 const request = decodeGoogleFontsUrl(
@@ -444,13 +468,13 @@ sont dans `test/html.test.js`, `test/google-fonts.test.js` et
 
 ## Rapprocher les observations (#6)
 
-`buildAuditReport` est exporté depuis `web-font-optimizer`. Il accepte les
+`buildAuditReport` est exporté depuis `@alelouet/web-font-optimizer`. Il accepte les
 observations du contrat partagé, y compris des entrées synthétiques, sans
 registre d’analyseurs ni exécution du projet. Cet exemple réutilise l’analyseur
 `example` défini plus haut :
 
 ```ts
-import { buildAuditReport, scan } from 'web-font-optimizer';
+import { buildAuditReport, scan } from '@alelouet/web-font-optimizer';
 
 const scanResult = await scan('./mon-projet', [example]);
 const report = await buildAuditReport(scanResult.observations, { root: scanResult.root });
@@ -530,5 +554,13 @@ La recette des deux projets est exécutée avec `npm test`, puis répétée par
 codes 0/1/2, plages Unicode, variables et chevauchement CDN/Next. Les accès HTTP,
 HTTPS, fetch et sockets sont bloqués pendant ces scans ; les chemins, contenus
 et dates de modification des fixtures sont comparés avant et après.
+
+La préparation npm ajoute des contrôles du nom avec scope, de la licence, du
+registre et de la concordance entre version et tag. `npm run validate` regroupe
+les vérifications locales ; `npm run release:check -- --dry-run` contrôle la
+configuration sans publier. Le workflow distinct `publish.yml` réutilise les
+quatre environnements de CI avant de publier depuis une GitHub Release.
+Son mode manuel de simulation reste activé par défaut. Les métadonnées npm,
+la licence et les documents de livraison sont inclus dans l’archive.
 
 Créé par Antoine LE LOUËT ([https://antoine.lelouet.fr](https://antoine.lelouet.fr)).

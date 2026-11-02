@@ -3,7 +3,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import test from 'node:test';
-import { reactAnalyzer, scan } from 'web-font-optimizer';
+import { reactAnalyzer, scan } from '@alelouet/web-font-optimizer';
 
 const analyze = (text, language = 'tsx', file = `src/Card.${language}`) => reactAnalyzer.analyze({ file, language, text });
 const usage = observations => observations.filter(o => o.kind === 'usage');

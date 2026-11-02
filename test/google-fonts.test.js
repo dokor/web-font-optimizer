@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decodeGoogleFontsUrl } from 'web-font-optimizer';
+import { decodeGoogleFontsUrl } from '@alelouet/web-font-optimizer';
 
 const location = { file: 'src/style.css', line: 3, column: 14 };
 const decode = url => decodeGoogleFontsUrl(url, location);

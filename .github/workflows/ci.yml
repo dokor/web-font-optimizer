@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -35,6 +36,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
+      - name: Check release metadata without publishing
+        run: npm run release:check -- --dry-run
       - name: Build, unit tests and production CLI tests
         run: npm test
       - name: Check the installed package on React/Vite and Next

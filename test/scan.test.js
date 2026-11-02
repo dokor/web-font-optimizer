@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { discoverSources, scan } from 'web-font-optimizer';
+import { discoverSources, scan } from '@alelouet/web-font-optimizer';
 
 async function fixture(t, entries) {
   const root = await mkdtemp(join(tmpdir(), 'font-audit-'));
