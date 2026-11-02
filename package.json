@@ -1,0 +1,24 @@
+{
+  "name": "web-font-optimizer",
+  "version": "0.1.0",
+  "description": "Audit statique en lecture seule des polices d’un projet web",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "bin": { "web-font-optimizer": "./dist/cli.js" },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./contracts": { "types": "./dist/contracts.d.ts", "import": "./dist/contracts.js" },
+    "./examples/report-v1": { "types": "./dist/examples/report-v1.d.ts", "import": "./dist/examples/report-v1.js" }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "~5.9.3"
+  }
+}
