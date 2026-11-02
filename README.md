@@ -1,14 +1,36 @@
 # web-font-optimizer
 
-Socle d’audit statique des polices pour **Node.js 22 ou ultérieur** (ES modules).
-À ce stade, le binaire découvre les sources et affiche leur nombre. Le registre
-d’analyseurs est vide par défaut ; un scan ne constitue donc pas encore un audit
-des usages. L’analyseur de feuilles utilise PostCSS, son parseur SCSS et
-`postcss-value-parser` ; il ne dépend d’aucun framework.
+CLI d’audit statique des polices web, développée en TypeScript pour
+**Node.js 22 ou ultérieur** (ES modules).
+
+Le projet vise les applications **React, notamment avec Vite, et Next.js** :
+recenser les déclarations, les chargements et les usages de polices, puis aider
+à repérer les doublons et les incohérences. L’audit est en lecture seule : il
+ne modifie pas les sources, n’exécute pas le projet analysé et ne télécharge
+pas les polices ni les feuilles de style distantes.
+
+## État actuel
+
+Le socle est disponible sur `main` : découverte des fichiers, API de scan avec
+analyseurs injectables, contrats d’observation et exemple de rapport v1.
+**Le binaire découvre actuellement les sources et affiche leur nombre.** Son
+registre d’analyseurs est vide par défaut ; il ne produit pas encore d’audit
+complet ni de diagnostics.
+
+Le MVP prévoit des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts,
+React et `next/font`, un moteur de diagnostics, des sorties terminal et JSON,
+et une option CI pour échouer sur les doublons certains. Ces fonctions font
+l’objet des lots ci-dessous ; les options `--report json` et
+`--fail-on-duplicates` ne sont pas encore disponibles dans le socle.
+
+Le suivi d’ensemble et les critères de livraison sont dans
+[l’issue de pilotage #9](https://github.com/dokor/web-font-optimizer/issues/9).
 
 ## Démarrer depuis le dépôt
 
 ```sh
+git clone https://github.com/dokor/web-font-optimizer.git
+cd web-font-optimizer
 npm ci
 npm run typecheck
 npm run build
@@ -17,12 +39,30 @@ npm exec --offline -- web-font-optimizer --help
 npm exec --offline -- web-font-optimizer scan ./src
 ```
 
+Ces commandes utilisent le binaire construit depuis le dépôt et ne nécessitent
+pas de publication npm. `--offline` s’applique à l’exécution locale après
+l’installation des dépendances.
+
+Exemple avec un seul fichier source du dépôt :
+
+```sh
+npm exec --offline -- web-font-optimizer scan ./src/discovery.ts
+```
+
+```text
+Fichiers sources découverts : 1
+```
+
 `scan [chemin]` accepte un répertoire (par défaut, le répertoire courant) ou
 un fichier pris en charge. La découverte trie les chemins et reconnaît HTML,
 CSS, SCSS, JS, JSX, TS et TSX, y compris les CSS Modules. Elle ignore les
 répertoires `node_modules`, `.next`, `dist`, `build` et `.git` et ne suit pas
-les liens symboliques rencontrés. L’aide et un scan réussi renvoient 0 ; une
-invocation invalide ou un chemin inaccessible renvoient 2 et une erreur sur stderr.
+les liens symboliques rencontrés.
+
+| Code de sortie actuel | Signification |
+| --- | --- |
+| `0` | Aide affichée ou découverte réussie |
+| `2` | Arguments invalides, chemin inaccessible, extension non prise en charge ou erreur d’exécution ; message sur stderr |
 
 ## Écrire et tester un analyseur
 
@@ -74,6 +114,8 @@ console.log(result.observations);
 ```
 
 L’analyseur fonctionne également en mémoire avec `cssAnalyzer.analyze`.
+Il utilise PostCSS, son parseur SCSS et `postcss-value-parser`, sans dépendance
+à un framework.
 Il accepte CSS, SCSS et leurs CSS Modules. Il conserve les déclarations
 `@font-face`, leurs sources ordonnées, les ressources et les imports avec
 leurs URL brutes. Il extrait les piles de familles, graisses et styles des
@@ -96,23 +138,35 @@ l’enregistrement dans la CLI sont réservés aux lots #3 et #8.
 
 ## Rapport v1 et répartition des lots
 
-Le moteur reçoit les observations et produit un `AuditReportV1` sérialisable
-en JSON. L’inventaire conserve les observations et les ressources distinctes ;
-`sizeBytes` est absent si la taille est inconnue. Un diagnostic lie un
-`ruleId` stable à une gravité, une confiance, au moins un emplacement et un
-conseil. Les sorties peuvent importer `exampleReport` depuis
+Le contrat `AuditReportV1` définit le rapport JSON que le moteur devra produire
+à partir des observations. L’inventaire conserve les observations et les
+ressources distinctes ; `sizeBytes` est absent si la taille est inconnue.
+Un diagnostic lie un `ruleId` stable à une gravité, une confiance, au moins
+un emplacement et un conseil. Les sorties peuvent importer `exampleReport` depuis
 `web-font-optimizer/examples/report-v1` sans lancer de scan.
 
 | Lot | Point d’extension | Validation isolée |
 | --- | --- | --- |
-| Socle (#1) | `src/contracts.ts`, `discovery.ts`, `scan.ts` | Découverte, injection et rapport d’exemple |
-| CSS / SCSS (#2) | `src/analyzers/css/` | Feuilles et CSS Modules synthétiques |
-| HTML / Google Fonts (#3) | `src/analyzers/html/`, `src/sources/google-fonts.ts` | HTML et décodage pur des URL |
-| React (#4) | `src/analyzers/react/` | JS, JSX, TS et TSX sans Next.js |
-| Next (#5) | `src/analyzers/next/` | Texte contenant des appels à `next/font` |
-| Moteur (#6) | `src/engine/` | Observations synthétiques → rapport v1 |
-| Sorties et politique CI (#7) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
-| Intégration (#8) | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
+| [Socle (#1)](https://github.com/dokor/web-font-optimizer/issues/1), livré | `src/contracts.ts`, `src/discovery.ts`, `src/scan.ts` | Découverte, injection et rapport d’exemple |
+| [CSS / SCSS (#2)](https://github.com/dokor/web-font-optimizer/issues/2) | `src/analyzers/css/` | Feuilles et CSS Modules synthétiques |
+| [HTML / Google Fonts (#3)](https://github.com/dokor/web-font-optimizer/issues/3) | `src/analyzers/html/`, `src/sources/google-fonts.ts` | HTML et décodage pur des URL |
+| [React (#4)](https://github.com/dokor/web-font-optimizer/issues/4) | `src/analyzers/react/` | JS, JSX, TS et TSX sans Next.js |
+| [Next (#5)](https://github.com/dokor/web-font-optimizer/issues/5) | `src/analyzers/next/` | Texte contenant des appels à `next/font` |
+| [Moteur (#6)](https://github.com/dokor/web-font-optimizer/issues/6) | `src/engine/` | Observations synthétiques → rapport v1 |
+| [Sorties et politique CI (#7)](https://github.com/dokor/web-font-optimizer/issues/7) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
+| [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8) | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
 
 Les chemins des lots suivants sont des emplacements proposés. Chaque lot peut
 ajouter ses tests et ses fixtures sans modifier le registre des autres.
+
+## Limites et périmètre
+
+- Une référence dans le code ne prouve pas qu’une police est rendue ou chargée
+  dans le navigateur. L’absence d’usage statique ne prouve pas qu’elle est inutile.
+- Les expressions dynamiques ou les rapprochements ambigus doivent rester
+  signalés comme tels ; ils ne justifient pas une suppression automatique.
+- La taille sur disque d’une ressource locale, lorsqu’elle sera inventoriée,
+  ne mesure pas une économie réseau. La taille des ressources distantes reste
+  inconnue sans téléchargement.
+- Les correctifs automatiques, le rapport Markdown, les plugins de formatage
+  et le score global sont hors du périmètre du MVP.
