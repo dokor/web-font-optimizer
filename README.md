@@ -486,3 +486,5 @@ Les types Node sont une dépendance de développement. Les actions GitHub sont
 figées sur un commit et le workflow dispose uniquement de la lecture du dépôt.
 La recette complète des deux projets et les statuts du pipeline de production
 restent à ajouter dans #8 ; la CI exécutera ces tests avec `npm test`.
+
+Créé par Antoine LE LOUËT ([https://antoine.lelouet.fr](https://antoine.lelouet.fr)).
