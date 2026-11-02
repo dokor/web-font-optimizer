@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { stat } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { audit, buildAuditReport, reactAnalyzer, scan } from 'web-font-optimizer';
-import { cssAnalyzer } from 'web-font-optimizer/analyzers/css';
-import { nextAnalyzer } from 'web-font-optimizer/analyzers/next';
+import { audit, buildAuditReport, reactAnalyzer, scan } from '@alelouet/web-font-optimizer';
+import { cssAnalyzer } from '@alelouet/web-font-optimizer/analyzers/css';
+import { nextAnalyzer } from '@alelouet/web-font-optimizer/analyzers/next';
 import { resolveUsages } from '../dist/engine/families.js';
 import { assertProductionReport, checkCliFixtures } from '../scripts/test-support/production-cases.js';
 

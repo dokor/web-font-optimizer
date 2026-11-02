@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildAuditReport } from 'web-font-optimizer';
+import { buildAuditReport } from '@alelouet/web-font-optimizer';
 
 const location = (line, file = 'styles.css') => ({ file, line, column: 1 });
 const source = (value, format = 'woff2') => ({ kind: 'file', value, format });

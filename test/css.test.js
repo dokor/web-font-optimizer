@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { cssAnalyzer } from 'web-font-optimizer/analyzers/css';
-import { scan } from 'web-font-optimizer';
+import { cssAnalyzer } from '@alelouet/web-font-optimizer/analyzers/css';
+import { scan } from '@alelouet/web-font-optimizer';
 import { fileURLToPath } from 'node:url';
 
 const fixtureUrl = new URL('./fixtures/css/', import.meta.url);

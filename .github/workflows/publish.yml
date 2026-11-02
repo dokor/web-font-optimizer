@@ -1,0 +1,78 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate the release without publishing
+        type: boolean
+        default: true
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+      - name: Install npm with OIDC support
+        run: npm install --global npm@11.21.1
+      - name: Install locked dependencies and build
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Require the release commit to belong to main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - name: Validate the version tag
+        if: github.event_name == 'release' || !inputs.dry_run
+        run: npm run release:check
+      - name: Validate a branch dry run
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: npm run release:check -- --dry-run
+      - name: Inspect the package without publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: npm publish --dry-run --access public
+      - name: Publish with OIDC or the initial bootstrap credential
+        if: github.event_name == 'release' || !inputs.dry_run
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
+      - name: Verify the public CLI from the registry
+        if: github.event_name == 'release' || !inputs.dry_run
+        shell: bash
+        run: |
+          package_name=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).name")
+          package_version=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")
+          smoke_directory=$(mktemp -d)
+          cd "$smoke_directory"
+          for attempt in 1 2 3; do
+            if npm exec --yes --package="$package_name@$package_version" -- web-font-optimizer --help; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+        env:
+          NODE_AUTH_TOKEN: ''

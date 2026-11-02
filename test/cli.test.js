@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { exampleReport } from 'web-font-optimizer/examples/report-v1';
+import { exampleReport } from '@alelouet/web-font-optimizer/examples/report-v1';
 
 const cli = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const run = (args, cwd) => spawnSync(process.execPath, [cli, ...args], { cwd, encoding: 'utf8' });

@@ -22,6 +22,9 @@ try {
   const [packed] = JSON.parse(run(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', temporary], root));
   const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
   const included = new Set(packed.files.map(file => file.path));
+  for (const file of ['LICENSE', 'README.md', 'CHANGELOG.md', 'docs/recette-mvp.md', 'docs/publication.md']) {
+    assert.ok(included.has(file), `Missing package documentation: ${file}`);
+  }
   for (const entry of Object.values(manifest.exports)) {
     assert.ok(included.has(entry.import.replace(/^\.\//, '')), `Missing JS export: ${entry.import}`);
     assert.ok(included.has(entry.types.replace(/^\.\//, '')), `Missing type export: ${entry.types}`);
@@ -33,12 +36,12 @@ try {
   const check = `
     import assert from 'node:assert/strict';
     import { existsSync } from 'node:fs';
-    import { scan, htmlAnalyzer, reactAnalyzer, decodeGoogleFontsUrl, buildAuditReport } from 'web-font-optimizer';
-    import { cssAnalyzer } from 'web-font-optimizer/analyzers/css';
-    import { nextAnalyzer } from 'web-font-optimizer/analyzers/next';
-    import { exampleReport } from 'web-font-optimizer/examples/report-v1';
-    import { renderJson, renderTerminal, getExitCode, runCli } from 'web-font-optimizer/reporters';
-    import 'web-font-optimizer/contracts';
+    import { scan, htmlAnalyzer, reactAnalyzer, decodeGoogleFontsUrl, buildAuditReport } from '@alelouet/web-font-optimizer';
+    import { cssAnalyzer } from '@alelouet/web-font-optimizer/analyzers/css';
+    import { nextAnalyzer } from '@alelouet/web-font-optimizer/analyzers/next';
+    import { exampleReport } from '@alelouet/web-font-optimizer/examples/report-v1';
+    import { renderJson, renderTerminal, getExitCode, runCli } from '@alelouet/web-font-optimizer/reporters';
+    import '@alelouet/web-font-optimizer/contracts';
     assert.equal(existsSync('node_modules/@types/node'), false);
     for (const name of ['react', 'next', 'vite']) assert.equal(existsSync('node_modules/' + name), false);
     assert.equal(typeof runCli, 'function');
@@ -60,9 +63,10 @@ try {
   `;
   run(process.execPath, ['--input-type=module', '-e', check, join(root, 'test', 'fixtures', 'react-vite')], consumer);
   assert.match(run(process.execPath, [npmCli, 'exec', '--offline', '--', 'web-font-optimizer', '--help'], consumer), /scan \[chemin\]/);
+  assert.match(run(process.execPath, [npmCli, 'exec', '--offline', '--', manifest.name, '--help'], consumer), /scan \[chemin\]/);
   const output = run(process.execPath, [npmCli, 'exec', '--offline', '--', 'web-font-optimizer', 'scan', join(root, 'src', 'discovery.ts'), '--report', 'json', '--fail-on-duplicates'], consumer);
   assert.equal(JSON.parse(output).version, 1);
-  const cli = join(consumer, 'node_modules', 'web-font-optimizer', 'dist', 'cli.js');
+  const cli = join(consumer, 'node_modules', ...manifest.name.split('/'), 'dist', 'cli.js');
   run(process.execPath, [cli, 'scan', join(temporary, 'missing.css')], consumer, 2);
   checkCliFixtures(cli, join(root, 'test', 'fixtures', 'integration'));
   console.log('Production package: exports, analyzers, engine, reporters and CLI verified.');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { exampleReport } from 'web-font-optimizer/examples/report-v1';
+import { exampleReport } from '@alelouet/web-font-optimizer/examples/report-v1';
 
 test('the typed v1 example survives JSON transport and links advice to its evidence', () => {
   const report = JSON.parse(JSON.stringify(exampleReport));

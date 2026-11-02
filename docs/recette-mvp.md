@@ -28,12 +28,12 @@ le code, les dépendances ou les options CLI.
 | Vérification continue | Node.js 22 et 24, Linux et Windows : installation verrouillée, typecheck, 114 tests et recette du paquet installé. | Quatre jobs verts sur la PR #18 |
 
 Les assertions partagées sont dans
-[`scripts/test-support/production-cases.js`](../scripts/test-support/production-cases.js).
-Elles sont appelées par [`test/integration.test.js`](../test/integration.test.js)
-et [`scripts/check-package.mjs`](../scripts/check-package.mjs), ce qui vérifie
+[`scripts/test-support/production-cases.js`](https://github.com/dokor/web-font-optimizer/blob/main/scripts/test-support/production-cases.js).
+Elles sont appelées par [`test/integration.test.js`](https://github.com/dokor/web-font-optimizer/blob/main/test/integration.test.js)
+et [`scripts/check-package.mjs`](https://github.com/dokor/web-font-optimizer/blob/main/scripts/check-package.mjs), ce qui vérifie
 les mêmes attentes sur le binaire construit et sur le binaire installé.
 Les règles, cas ambigus et permutations d’observations restent couverts par
-[`test/engine.test.js`](../test/engine.test.js) et les tests des analyseurs.
+[`test/engine.test.js`](https://github.com/dokor/web-font-optimizer/blob/main/test/engine.test.js) et les tests des analyseurs.
 
 ## Résultats des projets de référence
 

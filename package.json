@@ -1,5 +1,5 @@
 {
-  "name": "web-font-optimizer",
+  "name": "@alelouet/web-font-optimizer",
   "version": "0.1.0",
   "description": "Audit statique en lecture seule des polices d’un projet web",
   "type": "module",
@@ -36,14 +36,18 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test",
     "prepack": "npm run build",
-    "test:package": "node scripts/check-package.mjs"
+    "test:package": "node scripts/check-package.mjs",
+    "validate": "npm run typecheck && npm test && npm run test:package",
+    "release:check": "node scripts/check-release.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0"
@@ -54,5 +58,33 @@
     "postcss-value-parser": "^4.2.0",
     "parse5": "^8.1.0",
     "typescript": "~5.9.3"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Antoine LE LOUËT",
+    "url": "https://antoine.lelouet.fr"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dokor/web-font-optimizer.git"
+  },
+  "homepage": "https://github.com/dokor/web-font-optimizer#readme",
+  "bugs": {
+    "url": "https://github.com/dokor/web-font-optimizer/issues"
+  },
+  "keywords": [
+    "fonts",
+    "web-fonts",
+    "audit",
+    "cli",
+    "css",
+    "react",
+    "vite",
+    "nextjs",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
