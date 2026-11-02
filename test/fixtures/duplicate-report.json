@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "inventory": {
+    "observations": [
+      {
+        "kind": "declaration",
+        "origin": "@font-face",
+        "family": "Atlas",
+        "variants": [{ "weight": "400", "style": "normal", "stretch": "100%", "unicodeRange": "U+0000-00FF", "subset": "latin" }],
+        "context": "global",
+        "location": { "file": "src/fonts.css", "line": 2, "column": 1 },
+        "sources": [{ "kind": "file", "value": "./atlas.woff2", "format": "woff2" }],
+        "display": "swap"
+      },
+      {
+        "kind": "declaration",
+        "origin": "@font-face",
+        "family": "Atlas",
+        "variants": [{ "weight": "400", "style": "normal", "stretch": "100%", "unicodeRange": "U+0000-00FF", "subset": "latin" }],
+        "context": "global",
+        "location": { "file": "src/copy.css", "line": 12, "column": 3 },
+        "sources": [{ "kind": "file", "value": "./atlas.woff2", "format": "woff2" }]
+      }
+    ],
+    "resources": [{
+      "source": { "kind": "file", "value": "./atlas.woff2", "format": "woff2" },
+      "sizeBytes": 1024,
+      "locations": [
+        { "file": "src/fonts.css", "line": 2, "column": 1 },
+        { "file": "src/copy.css", "line": 12, "column": 3 }
+      ]
+    }]
+  },
+  "diagnostics": [{
+    "ruleId": "duplicate-load",
+    "severity": "warning",
+    "confidence": "certain",
+    "message": "Atlas 400 est déclarée deux fois dans le même contexte.",
+    "locations": [
+      { "column": 1, "line": 2, "file": "src/fonts.css" },
+      { "file": "src/copy.css", "line": 12, "column": 3 }
+    ],
+    "advice": "Conserver une seule déclaration partagée."
+  }]
+}

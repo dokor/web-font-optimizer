@@ -1,0 +1,8 @@
+{
+  "name": "react-vite-font-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite" },
+  "dependencies": { "react": "*", "react-dom": "*" },
+  "devDependencies": { "vite": "*", "typescript": "*" }
+}

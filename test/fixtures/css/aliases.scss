@@ -1,0 +1,19 @@
+// Sass aliases are parsed, never executed.
+$family: "Atlas";
+$body: $family, sans-serif;
+$weight: 600;
+:root {
+  --base: "Atlas", serif;
+  --font-body: var(--base);
+}
+.title {
+  font: italic 600 16px/1.4 var(--font-body);
+}
+.sass {
+  font-family: $body;
+  font-weight: $weight;
+  .nested {
+    $family: "Nested";
+    font-family: $family;
+  }
+}

@@ -3,22 +3,56 @@
   "version": "0.1.0",
   "description": "Audit statique en lecture seule des polices d’un projet web",
   "type": "module",
-  "engines": { "node": ">=22" },
-  "bin": { "web-font-optimizer": "./dist/cli.js" },
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./contracts": { "types": "./dist/contracts.d.ts", "import": "./dist/contracts.js" },
-    "./examples/report-v1": { "types": "./dist/examples/report-v1.d.ts", "import": "./dist/examples/report-v1.js" }
+  "engines": {
+    "node": ">=22"
   },
-  "files": ["dist"],
+  "bin": {
+    "web-font-optimizer": "./dist/cli.js"
+  },
+  "exports": {
+    "./analyzers/css": {
+      "types": "./dist/analyzers/css/index.d.ts",
+      "import": "./dist/analyzers/css/index.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./examples/report-v1": {
+      "types": "./dist/examples/report-v1.d.ts",
+      "import": "./dist/examples/report-v1.js"
+    },
+    "./analyzers/next": {
+      "types": "./dist/analyzers/next/index.d.ts",
+      "import": "./dist/analyzers/next/index.js"
+    },
+    "./reporters": {
+      "types": "./dist/reporters/index.d.ts",
+      "import": "./dist/reporters/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test:package": "node scripts/check-package.mjs"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.0.0"
+  },
+  "dependencies": {
+    "postcss": "^8.5.32",
+    "postcss-scss": "^4.0.9",
+    "postcss-value-parser": "^4.2.0",
+    "parse5": "^8.1.0",
     "typescript": "~5.9.3"
   }
 }
