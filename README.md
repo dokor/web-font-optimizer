@@ -17,8 +17,11 @@ analyseurs injectables, contrats d’observation et exemple de rapport v1.
 registre d’analyseurs est vide par défaut ; il ne produit pas encore d’audit
 complet ni de diagnostics.
 
-Le MVP prévoit des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts,
-React et `next/font`, un moteur de diagnostics, des sorties terminal et JSON,
+L’adaptateur `next/font` est disponible via l’API opt-in décrite ci-dessous.
+Il utilise TypeScript comme parseur à l’exécution et ne dépend pas de Next.js.
+
+Le MVP prévoit encore des analyseurs CSS/SCSS et CSS Modules, HTML/Google Fonts,
+React, un moteur de diagnostics, des sorties terminal et JSON,
 et une option CI pour échouer sur les doublons certains. Ces fonctions font
 l’objet des lots ci-dessous ; les options `--report json` et
 `--fail-on-duplicates` ne sont pas encore disponibles dans le socle.
@@ -102,6 +105,53 @@ colonnes commencent à 1 (colonnes en unités UTF-16). Conserver les variantes,
 l’ordre des sources de repli et les contextes connus. Omettre un champ inconnu ;
 pour une expression non résolue, émettre une observation `indeterminate` avec
 sa position, son texte et la raison.
+
+## Adaptateur Next.js (opt-in)
+
+```ts
+import { scan } from 'web-font-optimizer';
+import { nextAnalyzer } from 'web-font-optimizer/analyzers/next';
+
+const result = await scan('./src', [nextAnalyzer]);
+```
+
+L’adaptateur analyse JS, JSX, TS et TSX qui importent `next/font/google` ou
+`next/font/local`. Il suit les alias d’import, les imports namespace, les alias
+`const` des chargeurs et des instances, ainsi que les propriétés déstructurées.
+Les portées lexicales empêchent de confondre une instance avec un paramètre de
+même nom. Il n’exécute aucun code et ne lit ni modules importés ni fichiers de
+polices. Next.js n’a pas besoin d’être installé dans le projet analysé.
+
+Les options explicites `weight`, `style`, `subsets`, `display`, `src` et `variable`
+sont conservées. Les expressions dynamiques, propriétés abrégées et spreads
+non résolus produisent des observations `indeterminate` positionnées. Un spread
+invalide les options précédentes qu’il pourrait remplacer ; les options
+explicites suivantes restent connues. Les assertions de type et `satisfies`
+n’empêchent pas de lire un objet littéral. Les constantes d’options externes
+et les imports d’instances depuis un autre fichier ne sont pas résolus.
+
+Une famille Google conserve son nom public (`Roboto_Mono` → `Roboto Mono`),
+comparable au nom décodé dans une URL Google Fonts. Aucune URL CDN n’est inventée :
+Next héberge lui-même les fichiers générés. Une famille locale inconnue reçoit
+l’identité `local:<fichier>:<ligne>:<colonne>` du chargeur. Chaque fichier local
+conserve son chemin relatif et sa variante dans une déclaration et une ressource
+distinctes ; toutes les sources d’un chargeur partagent cette identité et son
+`context`.
+
+Les applications JSX de `.className` et `.style` émettent des usages liés à
+l’instance. L’option `variable` définit une correspondance nom CSS → famille ;
+son application JSX via `.variable` produit une référence d’origine
+`next/font/variable`, sans usage de famille. Une consommation dans une propriété
+JSX `style={{ fontFamily: 'var(--font-...)' }}` produit une référence d’origine
+`font-family`. Les références des feuilles CSS/SCSS externes appartiennent à
+l’analyseur CSS ; elles peuvent être rapprochées de la définition par le nom de
+variable. Le registre de production et les rapprochements du moteur restent
+respectivement les lots #8 et #6.
+
+Les fixtures `test/fixtures/next/` et les tests `test/next.test.js` couvrent les
+alias Google, les sources locales multiples, l’exposition et la consommation
+des variables, les options dynamiques, l’absence d’import Next et un scan sans
+écriture ni exécution du projet.
 
 ## Rapport v1 et répartition des lots
 

@@ -8,7 +8,8 @@
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
     "./contracts": { "types": "./dist/contracts.d.ts", "import": "./dist/contracts.js" },
-    "./examples/report-v1": { "types": "./dist/examples/report-v1.d.ts", "import": "./dist/examples/report-v1.js" }
+    "./examples/report-v1": { "types": "./dist/examples/report-v1.d.ts", "import": "./dist/examples/report-v1.js" },
+    "./analyzers/next": { "types": "./dist/analyzers/next/index.d.ts", "import": "./dist/analyzers/next/index.js" }
   },
   "files": ["dist"],
   "scripts": {
@@ -18,7 +19,9 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.0.0"
+  },
+  "dependencies": {
     "typescript": "~5.9.3"
   }
 }
