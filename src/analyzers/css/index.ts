@@ -1,9 +1,10 @@
 import postcss, { type ChildNode, type Declaration as CssDeclaration, type AtRule, type Rule, type Node } from 'postcss';
 import { parse as parseScss } from 'postcss-scss';
 import parser from 'postcss-value-parser';
-import type { Analyzer, Observation, SourceFile, Variant } from '../../contracts.js';
+import type { Analyzer, Observation, Resource, SourceFile, Variant } from '../../contracts.js';
+import { decodeGoogleFontsUrl } from '../../sources/google-fonts.js';
 import { aliases } from './aliases.js';
-import { families, fontSources, shorthand, source, stringArgument, tokens, stringify } from './values.js';
+import { decodeCssEscapes, families, fontSources, shorthand, source, stringArgument, tokens, stringify } from './values.js';
 
 export const cssAnalyzer: Analyzer = {
   id: 'css',
@@ -84,6 +85,7 @@ function analyzeStylesheet(input: SourceFile): Observation[] {
         d.parent?.type !== 'atrule') return;
     if (/^(--|\$)/.test(d.prop)) observations.push({
       ...evidence(d, 'variable'), kind: 'variable', action: 'define', name: d.prop, value: d.value,
+      ...(d.prop.startsWith('--') && context(d) === ':root' ? { scope: 'global' as const } : {}),
     });
     const offset = (d.source?.start?.offset ?? 0) + d.prop.length + (d.raws.between?.length ?? 1);
     parser(d.value).walk(node => {
@@ -105,11 +107,22 @@ function analyzeStylesheet(input: SourceFile): Observation[] {
         unknown(at, at.params, 'Import non statique.');
       } else {
         const conditions = at.params.slice(first!.sourceEndIndex).trim();
-        observations.push({
+        const resource: Resource = {
           ...evidence(at, '@import'),
+          ...(context(at) === ':stylesheet' && !conditions ? { scope: 'global' as const } : {}),
           context: context(at) + (conditions ? ' > @import ' + conditions : ''),
           kind: 'resource', role: 'stylesheet', source: source(raw),
+        };
+        const decoded = decodeGoogleFontsUrl(decodeCssEscapes(raw), resource.location);
+        observations.push({ ...resource, ...(decoded?.families.length ? { declarationLocation: resource.location } : {}) });
+        for (const family of decoded?.families ?? []) observations.push({
+          ...evidence(at, '@import'), context: resource.context!, kind: 'declaration',
+          family: family.family, sources: [resource.source],
+          ...(context(at) === ':stylesheet' && !conditions ? { scope: 'global' as const } : {}),
+          ...(family.variants.length ? { variants: family.variants } : {}),
+          ...(decoded?.display ? { display: decoded.display } : {}),
         });
+        for (const issue of decoded?.issues ?? []) unknown(at, issue.expression, issue.reason);
       }
     }
     if (at.name.toLowerCase() !== 'font-face') return;
@@ -148,6 +161,7 @@ function analyzeStylesheet(input: SourceFile): Observation[] {
     if (parsed.unknown) unknown(descriptors.get('src')![0]!, src!, 'Source de police non statique.');
     const display = get('font-display');
     const details = {
+      ...(context(at) === ':stylesheet' ? { scope: 'global' as const } : {}),
       ...(stack?.length === 1 ? { family: stack[0]! } : {}),
       ...(Object.keys(variant).length ? { variants: [variant] } : {}),
     };
@@ -159,7 +173,7 @@ function analyzeStylesheet(input: SourceFile): Observation[] {
       if (item.kind === 'local-name') continue;
       observations.push({
         ...evidence(descriptors.get('src')![0]!, '@font-face'), ...details,
-        kind: 'resource', role: 'font', source: item,
+        kind: 'resource', role: 'font', source: item, declarationLocation: location(at.source?.start?.offset ?? 0),
       });
     }
   });

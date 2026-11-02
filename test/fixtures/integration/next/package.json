@@ -1,0 +1,1 @@
+{"name":"font-audit-next-fixture","private":true,"type":"module","scripts":{"dev":"next dev"},"dependencies":{"next":"*","react":"*","react-dom":"*"}}

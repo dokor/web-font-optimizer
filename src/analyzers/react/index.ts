@@ -86,7 +86,7 @@ function analyze(source: SourceFile): Observation[] {
       const stylesheet = posix.normalize(posix.join(posix.dirname(source.file), specifier.split(/[?#]/, 1)[0]!));
       observations.push({
         kind: 'resource', role: 'stylesheet', origin: 'react:stylesheet-import',
-        source: { kind: 'file', value: stylesheet }, location: location(statement.moduleSpecifier),
+        source: { kind: 'file', value: posix.normalize(specifier.split(/[?#]/, 1)[0]!) }, location: location(statement.moduleSpecifier),
         context: 'static-code-reference',
       });
       if (/\.module\.(css|scss)(?:[?#].*)?$/i.test(specifier)) {

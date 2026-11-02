@@ -13,6 +13,7 @@ export interface AuditOptions {
 type Load = Declaration | Resource;
 
 function isLoad(o: Observation): o is Load {
+  if (o.origin === 'react:stylesheet-import') return false; // Static import references are deduplicated by bundlers.
   return o.kind === 'declaration' || (o.kind === 'resource' && (o.role === 'stylesheet' || o.role === 'font'));
 }
 
@@ -29,7 +30,8 @@ function loadSignature(load: Load): string | undefined {
   return key({ ...evidence, ...normalized,
     variants: load.variants ? [...load.variants].sort((a, b) => compare(key(a), key(b))) : undefined,
     // Without a known instance/scope, only repeats in the same file are strict.
-    context: context ?? { file: location.file } });
+    context: load.scope === 'global' && ['@font-face', '@import'].includes(load.origin)
+      ? { file: location.file, context } : context ?? { file: location.file } });
 }
 
 function sameSource(a: Load, b: Load): boolean {
@@ -45,7 +47,9 @@ function describeVariant(variant: Variant): string {
 export async function buildAuditReport(input: readonly Observation[], options: AuditOptions = {}): Promise<AuditReportV1> {
   const observations = input.map(canonical).sort((a, b) => compare(key(a), key(b)));
   const diagnostics: Diagnostic[] = [];
-  const loads = observations.filter(isLoad);
+  const loads = observations.filter(isLoad).filter(o => !(o.kind === 'resource' && o.declarationLocation
+    && observations.some(d => d.kind === 'declaration' && key(d.location) === key(o.declarationLocation)
+      && d.sources?.some(s => key(sourceIdentity(d, s)) === key(sourceIdentity(o, o.source))))));
   const repeats = new Map<string, Load[]>();
   for (const load of loads) {
     const signature = loadSignature(load);
@@ -81,7 +85,8 @@ export async function buildAuditReport(input: readonly Observation[], options: A
   const usages = resolveUsages(observations);
   for (const declaration of declarations) {
     const family = familyName(declaration.family!);
-    const relevant = usages.filter(u => canServe(declaration, u.observation));
+    const relevant = usages.filter(u => canServe(declaration, u.observation)
+      || (declaration.context !== undefined && u.providers.includes(declaration.context)));
     const dynamic = relevant.some(u => u.dynamic) || observations.some(o => o.kind === 'indeterminate'
       && canServe(declaration, o) && (!o.family || familyName(o.family) === family));
     if (dynamic) continue;
@@ -99,7 +104,8 @@ export async function buildAuditReport(input: readonly Observation[], options: A
     if (usage.dynamic) continue;
     for (const family of usage.families) {
       if (isSystemFamily(family)) continue;
-      const known = declarations.filter(d => familyName(d.family!) === familyName(family) && canServe(d, usage.observation));
+      const known = declarations.filter(d => familyName(d.family!) === familyName(family)
+        && (canServe(d, usage.observation) || (d.context !== undefined && usage.providers.includes(d.context))));
       if (known.length) continue;
       diagnostics.push({ ruleId: 'undeclared-family', severity: 'info', confidence: 'possible', locations: [usage.observation.location],
         message: `Aucune déclaration connue dans cette portée pour ${family}.`,

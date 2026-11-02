@@ -242,7 +242,7 @@ function analyze(input: SourceFile): Observation[] {
       const fontSource: FontSource = { kind: 'file', value: path };
       const shared = { ...evidence, location: location(item), ...(perSource.length ? { variants: perSource } : {}) };
       observations.push({ kind: 'declaration', ...shared, ...presentation, sources: [fontSource] });
-      observations.push({ kind: 'resource', ...shared, role: 'font', source: fontSource });
+      observations.push({ kind: 'resource', ...shared, role: 'font', source: fontSource, declarationLocation: shared.location });
     }
   }
 
@@ -348,7 +348,7 @@ function analyze(input: SourceFile): Observation[] {
   return observations.sort((a, b) => a.location.line - b.location.line || a.location.column - b.location.column);
 }
 
-/** Opt-in adapter: production registration belongs to integration issue #8. */
+/** Static adapter, also included in the production registry. */
 export const nextAnalyzer: Analyzer = {
   id: 'next-font', languages: ['js', 'jsx', 'ts', 'tsx'], analyze,
 };

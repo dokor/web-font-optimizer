@@ -25,6 +25,7 @@ export interface Variant {
 
 export interface FontSource {
   readonly kind: 'file' | 'url' | 'local-name' | 'data';
+  /** File sources are relative to the evidence file, not the scan root. */
   readonly value: string;
   readonly format?: string;
 }
@@ -37,6 +38,8 @@ interface Evidence {
   readonly variants?: readonly Variant[];
   /** Scope or instance identity, when statically identifiable. */
   readonly context?: string;
+  /** A known project-wide binding; context still preserves authored evidence. */
+  readonly scope?: 'global';
 }
 
 export interface Declaration extends Evidence {
@@ -63,6 +66,8 @@ export interface Resource extends Evidence {
   readonly kind: 'resource';
   readonly role: 'font' | 'stylesheet' | 'preload' | 'preconnect';
   readonly source: FontSource;
+  /** Resource evidence belonging to this declaration, not a separate load. */
+  readonly declarationLocation?: Location;
 }
 
 export interface VariableReference extends Evidence {
