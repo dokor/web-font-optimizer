@@ -48,9 +48,9 @@ export function analyzeHtml({ file, text }: SourceFile): readonly Observation[] 
           ];
           for (const role of roles) {
             const origin = `link[rel=${role}]`;
-            observations.push({ kind: 'resource', origin, role, source, location });
-            if (role !== 'stylesheet') continue;
-            const decoded = decodeGoogleFontsUrl(href, location);
+            const decoded = role === 'stylesheet' ? decodeGoogleFontsUrl(href, location) : undefined;
+            observations.push({ kind: 'resource', origin, role, source, location,
+              ...(decoded?.families.length ? { declarationLocation: location } : {}) });
             if (!decoded) continue;
             for (const { family, variants } of decoded.families) {
               observations.push({

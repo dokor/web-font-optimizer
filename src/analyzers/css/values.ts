@@ -15,12 +15,12 @@ export function groups(nodes: parser.Node[]): parser.Node[][] {
   return result;
 }
 
-function unescape(value: string): string {
-  return value.replace(/\\([\da-f]{1,6}\s?|.)/gi, (_, escape: string) => {
+export function decodeCssEscapes(value: string): string {
+  return value.replace(/\\(?:\r\n|[\n\r\f])/g, '').replace(/\\([\da-f]{1,6}[\t\n\f\r ]?|.)/gi, (_, escape: string) => {
     const hex = escape.trim();
-    return /^[\da-f]{1,6}$/i.test(hex)
-      ? String.fromCodePoint(Math.min(parseInt(hex, 16) || 0xfffd, 0x10ffff))
-      : escape;
+    if (!/^[\da-f]{1,6}$/i.test(hex)) return escape;
+    const point = parseInt(hex, 16);
+    return String.fromCodePoint(point === 0 || point > 0x10ffff || (point >= 0xd800 && point <= 0xdfff) ? 0xfffd : point);
   });
 }
 
@@ -31,7 +31,7 @@ export function families(value: string): string[] | undefined {
     if (!nodes.length || nodes.some(n => !['word', 'string'].includes(n.type))) return;
     if (nodes.some(n => /[$#]/.test(n.value))) return;
     if (nodes.some(n => n.type === 'string') && nodes.length !== 1) return;
-    const name = unescape(nodes.map(n => n.value).join(' '));
+    const name = decodeCssEscapes(nodes.map(n => n.value).join(' '));
     if (/^(inherit|initial|unset|revert|revert-layer)$/i.test(name)) return;
     result.push(name);
   }
@@ -40,8 +40,8 @@ export function families(value: string): string[] | undefined {
 
 export function source(value: string, kind?: 'local-name'): FontSource {
   return {
-    kind: kind ?? (/^data:/i.test(value) ? 'data'
-      : /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(value) ? 'url' : 'file'),
+    kind: kind ?? (/^data:/i.test(decodeCssEscapes(value)) ? 'data'
+      : /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(decodeCssEscapes(value)) ? 'url' : 'file'),
     value,
   };
 }

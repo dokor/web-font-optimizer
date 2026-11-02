@@ -59,7 +59,7 @@ const key = 'title';
 export const Card = () => <h1 className={styles.title + ' ' + styles['wide-title'] + theme[key]}>Hello</h1>;`;
   const observations = analyze(text);
   assert.deepEqual(observations.filter(o => o.kind === 'resource').map(o => o.source), [
-    { kind: 'file', value: 'src/Card.module.css' }, { kind: 'file', value: 'src/theme.module.scss' },
+    { kind: 'file', value: 'Card.module.css' }, { kind: 'file', value: 'theme.module.scss' },
   ]);
   assert.deepEqual(usage(observations).map(o => o.cssModule), [
     { stylesheet: 'src/Card.module.css', className: 'title' },
@@ -89,7 +89,7 @@ import sheet from './nested/../theme.scss?inline';
 import 'package/theme.css';
 import 'https://example.test/theme.css';
 import logo from './logo.svg';`, language);
-    assert.deepEqual(observations.map(o => o.source.value), ['styles/site.css', 'src/theme.scss']);
+    assert.deepEqual(observations.map(o => o.source.value), ['../styles/site.css', 'theme.scss']);
   }
 });
 

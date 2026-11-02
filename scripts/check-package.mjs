@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkCliFixtures } from './test-support/production-cases.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const npmCli = process.env.npm_execpath;
@@ -63,6 +64,7 @@ try {
   assert.equal(JSON.parse(output).version, 1);
   const cli = join(consumer, 'node_modules', 'web-font-optimizer', 'dist', 'cli.js');
   run(process.execPath, [cli, 'scan', join(temporary, 'missing.css')], consumer, 2);
+  checkCliFixtures(cli, join(root, 'test', 'fixtures', 'integration'));
   console.log('Production package: exports, analyzers, engine, reporters and CLI verified.');
 } finally {
   assert.equal(dirname(resolve(temporary)), resolve(tmpdir()));
