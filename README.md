@@ -21,9 +21,10 @@ registre est encore vide et son moteur n’est pas raccordé.** Elle produit don
 un inventaire vide. Le lot [#8](https://github.com/dokor/web-font-optimizer/issues/8)
 doit assembler le parcours de production et le valider sur React/Vite et Next.js.
 
-Les lots #2 à #7 sont réunis dans la branche de fusion des PR #11 à #16 ; leur
-statut de livraison sera actualisé après fusion sur `main`. Les sections de
-chaque lot ci-dessous décrivent leurs capacités et limites propres.
+Les lots #1 à #7 sont livrés sur `main`. Les PR #11 à #16 ont été fusionnées
+ensemble via la [PR #17](https://github.com/dokor/web-font-optimizer/pull/17),
+après validation de la CI sur ses quatre environnements. Le lot #8 reste ouvert.
+Les sections ci-dessous décrivent les capacités et limites de chaque module.
 
 Le suivi d’ensemble et les critères de livraison sont dans
 [l’issue de pilotage #9](https://github.com/dokor/web-font-optimizer/issues/9).
@@ -282,8 +283,9 @@ son application JSX via `.variable` produit une référence d’origine
 JSX `style={{ fontFamily: 'var(--font-...)' }}` produit une référence d’origine
 `font-family`. Les références des feuilles CSS/SCSS externes appartiennent à
 l’analyseur CSS ; elles peuvent être rapprochées de la définition par le nom de
-variable. Le moteur du lot #6 est disponible via l’API pour rapprocher ces observations ;
-le registre de production reste au lot #8.
+variable. Le moteur du lot #6 est disponible via l’API, mais les conventions
+entre analyseurs doivent encore être harmonisées dans #8 (voir les limites
+de composition ci-dessous). Le registre de production reste au lot #8.
 
 Les fixtures `test/fixtures/next/` et les tests `test/next.test.js` couvrent les
 alias Google, les sources locales multiples, l’exposition et la consommation
@@ -302,12 +304,12 @@ un emplacement et un conseil. Les sorties peuvent importer `exampleReport` depui
 | Lot | Point d’extension | Validation isolée |
 | --- | --- | --- |
 | [Socle (#1)](https://github.com/dokor/web-font-optimizer/issues/1), livré | `src/contracts.ts`, `src/discovery.ts`, `src/scan.ts` | Découverte, injection et rapport d’exemple |
-| [CSS / SCSS (#2)](https://github.com/dokor/web-font-optimizer/issues/2) | `src/analyzers/css/` | Feuilles et CSS Modules synthétiques |
-| [HTML / Google Fonts (#3)](https://github.com/dokor/web-font-optimizer/issues/3) | `src/analyzers/html/`, `src/sources/google-fonts.ts` | HTML et décodage pur des URL |
-| [React (#4)](https://github.com/dokor/web-font-optimizer/issues/4) | `src/analyzers/react/` | JS, JSX, TS et TSX sans Next.js |
-| [Next (#5)](https://github.com/dokor/web-font-optimizer/issues/5) | `src/analyzers/next/` | Texte contenant des appels à `next/font` |
-| [Moteur (#6)](https://github.com/dokor/web-font-optimizer/issues/6) | `src/engine/` | Observations synthétiques → rapport v1 |
-| [Sorties et politique CI (#7)](https://github.com/dokor/web-font-optimizer/issues/7) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
+| [CSS / SCSS (#2)](https://github.com/dokor/web-font-optimizer/issues/2), livré ([PR #11](https://github.com/dokor/web-font-optimizer/pull/11)) | `src/analyzers/css/` | Feuilles et CSS Modules synthétiques |
+| [HTML / Google Fonts (#3)](https://github.com/dokor/web-font-optimizer/issues/3), livré ([PR #12](https://github.com/dokor/web-font-optimizer/pull/12)) | `src/analyzers/html/`, `src/sources/google-fonts.ts` | HTML et décodage pur des URL |
+| [React (#4)](https://github.com/dokor/web-font-optimizer/issues/4), livré ([PR #13](https://github.com/dokor/web-font-optimizer/pull/13)) | `src/analyzers/react/` | JS, JSX, TS et TSX sans Next.js |
+| [Next (#5)](https://github.com/dokor/web-font-optimizer/issues/5), livré ([PR #14](https://github.com/dokor/web-font-optimizer/pull/14)) | `src/analyzers/next/` | Texte contenant des appels à `next/font` |
+| [Moteur (#6)](https://github.com/dokor/web-font-optimizer/issues/6), livré ([PR #16](https://github.com/dokor/web-font-optimizer/pull/16)) | `src/engine/` | Observations synthétiques → rapport v1 |
+| [Sorties et politique CI (#7)](https://github.com/dokor/web-font-optimizer/issues/7), livré ([PR #15](https://github.com/dokor/web-font-optimizer/pull/15)) | `src/reporters/` | Rapport v1 → terminal, JSON et statut |
 | [Intégration (#8)](https://github.com/dokor/web-font-optimizer/issues/8) | `src/cli.ts` et registre de production | Binaire empaqueté sur les deux projets de référence |
 
 Les lots #2 à #7 restent indépendants du registre de production. Le lot #8
@@ -324,6 +326,26 @@ raccordera leurs points d’extension et complétera les tests de bout en bout.
   inconnue sans téléchargement.
 - Les correctifs automatiques, le rapport Markdown, les plugins de formatage
   et le score global sont hors du périmètre du MVP.
+
+### Limites de composition avant le lot #8
+
+La revue de l’API combinée a reproduit ces écarts ; les tests isolés et le
+contrôle du paquet ne constituent pas encore une recette du pipeline complet :
+
+- Une face CSS au contexte `:stylesheet` et son usage dans `body` ne sont pas
+  rapprochés par le moteur : des diagnostics `undeclared-family` et
+  `no-static-usage` contradictoires peuvent apparaître. La déclaration et sa
+  propre ressource `src` peuvent aussi produire un `possible-overlap`.
+- Les imports React sont relatifs à la racine, alors que le moteur attend des
+  sources relatives au fichier de preuve : `src/base.css` peut être résolu
+  en `src/src/base.css`, avec une taille inconnue malgré un fichier existant.
+- Une référence Next `.variable` est comptée comme un usage par le moteur,
+  alors qu’elle expose seulement une variable. La consommation de cette
+  variable dans une feuille CSS externe peut rester non résolue entre portées.
+
+Ces cas sont suivis avec leurs reproductions et leur recette dans
+[l’issue #8](https://github.com/dokor/web-font-optimizer/issues/8). Ils doivent
+être corrigés avant la livraison de la CLI d’audit complète.
 
 ## HTML et Google Fonts (#3)
 
