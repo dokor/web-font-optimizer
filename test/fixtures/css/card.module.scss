@@ -1,0 +1,19 @@
+:root {
+  --cycle-a: var(--cycle-b);
+  --cycle-b: var(--cycle-a);
+}
+.card {
+  font-family: "Static", sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}
+.dynamic {
+  font-family: var(--cycle-a);
+  font-weight: $unknown;
+  font: 16px "#{$theme}";
+}
+.overloaded {
+  --font: "One";
+  --font: "Two";
+  font-family: var(--font);
+}

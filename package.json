@@ -3,14 +3,33 @@
   "version": "0.1.0",
   "description": "Audit statique en lecture seule des polices d’un projet web",
   "type": "module",
-  "engines": { "node": ">=22" },
-  "bin": { "web-font-optimizer": "./dist/cli.js" },
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./contracts": { "types": "./dist/contracts.d.ts", "import": "./dist/contracts.js" },
-    "./examples/report-v1": { "types": "./dist/examples/report-v1.d.ts", "import": "./dist/examples/report-v1.js" }
+  "engines": {
+    "node": ">=22"
   },
-  "files": ["dist"],
+  "bin": {
+    "web-font-optimizer": "./dist/cli.js"
+  },
+  "exports": {
+    "./analyzers/css": {
+      "types": "./dist/analyzers/css/index.d.ts",
+      "import": "./dist/analyzers/css/index.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./examples/report-v1": {
+      "types": "./dist/examples/report-v1.d.ts",
+      "import": "./dist/examples/report-v1.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
@@ -20,5 +39,11 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "~5.9.3"
-  }
+  },
+  "dependencies": {
+    "postcss": "^8.5.32",
+    "postcss-scss": "^4.0.9",
+    "postcss-value-parser": "^4.2.0"
+  },
+  "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956"
 }

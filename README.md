@@ -3,7 +3,8 @@
 Socle d’audit statique des polices pour **Node.js 22 ou ultérieur** (ES modules).
 À ce stade, le binaire découvre les sources et affiche leur nombre. Le registre
 d’analyseurs est vide par défaut ; un scan ne constitue donc pas encore un audit
-des usages. Le paquet n’a aucune dépendance d’exécution.
+des usages. L’analyseur de feuilles utilise PostCSS, son parseur SCSS et
+`postcss-value-parser` ; il ne dépend d’aucun framework.
 
 ## Démarrer depuis le dépôt
 
@@ -61,6 +62,37 @@ colonnes commencent à 1 (colonnes en unités UTF-16). Conserver les variantes,
 l’ordre des sources de repli et les contextes connus. Omettre un champ inconnu ;
 pour une expression non résolue, émettre une observation `indeterminate` avec
 sa position, son texte et la raison.
+
+## Analyseur CSS et SCSS
+
+```ts
+import { scan } from 'web-font-optimizer';
+import { cssAnalyzer } from 'web-font-optimizer/analyzers/css';
+
+const result = await scan('./src', [cssAnalyzer]);
+console.log(result.observations);
+```
+
+L’analyseur fonctionne également en mémoire avec `cssAnalyzer.analyze`.
+Il accepte CSS, SCSS et leurs CSS Modules. Il conserve les déclarations
+`@font-face`, leurs sources ordonnées, les ressources et les imports avec
+leurs URL brutes. Il extrait les piles de familles, graisses et styles des
+propriétés explicites et du raccourci `font`. Les observations d’usage d’un
+même bloc partagent un contexte de sélecteur et d’ancêtres (dont `@media`).
+Les positions pointent au début de la déclaration, du descripteur de ressource
+ou de la directive ; les références de variables pointent sur la référence.
+
+Les alias simples suivent la portée lexicale SCSS ou une définition CSS locale
+ou `:root` unique et inconditionnelle. Une pile de repli de `var()` est utilisable
+si aucune définition du nom n’existe dans le fichier. Les cycles, définitions
+concurrentes, interpolations, valeurs calculées non prises en charge et portées
+SCSS conditionnelles produisent des observations indéterminées. Les observations
+statiques du reste du fichier sont conservées.
+
+L’analyse ne résout pas la cascade du navigateur, les alias entre fichiers ni
+les mixins et fonctions Sass. Un poids isolé ne reçoit pas de famille inférée.
+Les imports ne sont ni téléchargés ni exécutés. Le décodage Google Fonts et
+l’enregistrement dans la CLI sont réservés aux lots #3 et #8.
 
 ## Rapport v1 et répartition des lots
 
